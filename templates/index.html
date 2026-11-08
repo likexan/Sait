@@ -4,85 +4,120 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Minimal</title>
+
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
+
 <body>
+
   <div class="cursor" id="cursor"></div>
   <div class="cursor-follower" id="cursorFollower"></div>
 
+  <!-- Навигация -->
   <nav class="nav">
     <a href="#" class="logo" id="logoLink">minimal.</a>
+
     <ul class="nav-links" id="navLinks">
       <li><a href="#work">Работы</a></li>
       <li><a href="#about">О себе</a></li>
       <li><a href="#contact">Контакт</a></li>
+      <li><a href="#" id="ctfNavLink">CTF</a></li>
+      <li>
+        <a href="#" id="ctfModNavLink" hidden>Модерация CTF</a>
+      </li>
     </ul>
+
     <div class="nav-right">
+
       <button class="theme-toggle" id="themeToggle" aria-label="Переключить тему">
         <span class="sun">☀</span>
         <span class="moon">☾</span>
       </button>
+
       <button class="btn-nav" id="loginBtn">Войти</button>
+
       <div class="user-menu" id="userMenu" hidden>
         <button class="user-btn" id="userBtn">
           <span class="user-avatar" id="userAvatar">A</span>
           <span class="user-name" id="userName">User</span>
         </button>
+
         <div class="user-dropdown" id="userDropdown">
           <a href="#cabinet" id="cabinetLink">Личный кабинет</a>
           <button id="logoutBtn">Выйти</button>
         </div>
       </div>
+
     </div>
   </nav>
 
+
+  <!-- Главная страница -->
   <main id="mainContent">
+
     <section class="hero">
       <p class="hero-label">Дизайн · Код · Простота</p>
+
       <h1 class="hero-title">
         Создаём<br>
         <span class="accent">минимальное</span><br>
         цифровое
       </h1>
-      <p class="hero-sub">Чистые интерфейсы. Внимание к деталям. Ничего лишнего.</p>
+
+      <p class="hero-sub">
+        Чистые интерфейсы. Внимание к деталям. Ничего лишнего.
+      </p>
+
       <a href="#work" class="btn">Смотреть работы →</a>
     </section>
 
+
+    <!-- Работы -->
     <section class="work" id="work">
       <h2 class="section-title">Избранные проекты</h2>
+
       <div class="projects">
+
         <article class="project">
           <div class="project-num">01</div>
           <h3>Studio Nord</h3>
           <p>Брендинг и сайт для архитектурного бюро</p>
           <span class="tag">Брендинг</span>
         </article>
+
         <article class="project">
           <div class="project-num">02</div>
           <h3>Quiet App</h3>
           <p>Мобильное приложение для медитации и фокуса</p>
           <span class="tag">UI / UX</span>
         </article>
+
         <article class="project">
           <div class="project-num">03</div>
           <h3>Paper & Ink</h3>
           <p>Интернет-магазин независимых издательств</p>
           <span class="tag">E-commerce</span>
         </article>
+
       </div>
     </section>
 
+
+    <!-- О себе -->
     <section class="about" id="about">
       <div class="about-content">
         <h2 class="section-title">О подходе</h2>
+
         <p>
           Минимализм — не про пустоту. Это про ясность.
           Убираем всё, что мешает, и оставляем только то,
           что действительно работает.
         </p>
+
         <p>
           Каждый пиксель, каждая анимация и каждое слово
           должны иметь смысл. Больше — не всегда лучше.
@@ -90,71 +125,120 @@
       </div>
     </section>
 
+
+    <!-- Контакты -->
     <section class="contact" id="contact">
       <h2 class="section-title">Связаться</h2>
+
       <p class="contact-text">Есть идея? Давайте обсудим.</p>
-      <a href="mailto:hello@minimal.studio" class="email">hello@minimal.studio</a>
+
+      <a href="mailto:hello@minimal.studio" class="email">
+        hello@minimal.studio
+      </a>
+
       <div class="socials">
         <a href="#" aria-label="Telegram">Tg</a>
         <a href="#" aria-label="Behance">Be</a>
         <a href="#" aria-label="GitHub">Gh</a>
       </div>
     </section>
+
   </main>
 
+
+  <!-- Личный кабинет -->
   <section class="cabinet" id="cabinet" hidden>
+
     <div class="cabinet-inner">
+
       <header class="cabinet-header">
         <h1>Личный кабинет</h1>
-        <p class="cabinet-greeting">Добро пожаловать, <span id="cabinetName">User</span></p>
+
+        <p class="cabinet-greeting">
+          Добро пожаловать,
+          <span id="cabinetName">User</span>
+        </p>
       </header>
 
+
       <div class="cabinet-grid">
+
+        <!-- Профиль -->
         <div class="cabinet-card">
           <h3>Профиль</h3>
+
           <div class="profile-info">
+
             <div class="info-row">
               <span class="info-label">Имя</span>
               <span class="info-value" id="profileName">—</span>
             </div>
+
             <div class="info-row">
               <span class="info-label">Email</span>
               <span class="info-value" id="profileEmail">—</span>
             </div>
+
             <div class="info-row">
               <span class="info-label">Роль</span>
-              <span class="info-value"><span class="role-badge" id="profileRole">—</span></span>
+              <span class="info-value">
+                <span class="role-badge" id="profileRole">—</span>
+              </span>
             </div>
+
             <div class="info-row">
               <span class="info-label">Дата регистрации</span>
               <span class="info-value" id="profileDate">—</span>
             </div>
+
           </div>
         </div>
 
+
+        <!-- Настройки -->
         <div class="cabinet-card">
           <h3>Настройки</h3>
+
           <form id="profileForm" class="profile-form">
+
             <div class="form-group">
               <label for="editName">Имя</label>
-              <input type="text" id="editName" required minlength="2">
+              <input
+                type="text"
+                id="editName"
+                required
+                minlength="2"
+              >
             </div>
-            <button type="submit" class="btn btn-full">Сохранить</button>
+
+            <button type="submit" class="btn btn-full">
+              Сохранить
+            </button>
+
           </form>
+
           <p class="form-message" id="profileMessage"></p>
         </div>
 
+
+        <!-- Активность -->
         <div class="cabinet-card cabinet-card-wide">
           <h3>Активность</h3>
+
           <ul class="activity-list" id="activityList">
             <li>Загрузка…</li>
           </ul>
         </div>
 
+
+        <!-- Управление пользователями -->
         <div class="cabinet-card cabinet-card-wide" id="usersPanel" hidden>
+
           <h3>Пользователи</h3>
+
           <div class="users-table-wrap">
             <table class="users-table" id="usersTable">
+
               <thead>
                 <tr>
                   <th>Имя</th>
@@ -163,75 +247,578 @@
                   <th></th>
                 </tr>
               </thead>
+
               <tbody id="usersTableBody"></tbody>
+
             </table>
           </div>
+
           <p class="form-message" id="usersMessage"></p>
+
         </div>
+
       </div>
 
-      <button class="btn btn-outline" id="backToSite">← На главную</button>
+      <button class="btn btn-outline" id="backToSite">
+        ← На главную
+      </button>
+
     </div>
+
   </section>
 
+
+  <!-- CTF -->
+  <section class="ctf-page" id="ctfPage" hidden>
+
+    <div class="ctf-container">
+
+      <header class="ctf-header">
+        <div>
+          <p class="hero-label">OSINT · Investigation · Intelligence</p>
+          <h1>CTF Challenges</h1>
+          <p class="ctf-description">
+            Практические задания по OSINT и цифровым расследованиям.
+            Проверяй свои навыки, исследуй информацию и находи ответы.
+          </p>
+        </div>
+      </header>
+
+
+      <!-- Создание задания -->
+      <div class="ctf-create-card" id="ctfCreateCard" hidden>
+
+        <h2>Создать задание</h2>
+
+        <form id="ctfCreateForm">
+
+          <div class="form-group">
+            <label for="ctfCreateTitle">Название</label>
+            <input
+              type="text"
+              id="ctfCreateTitle"
+              required
+              maxlength="150"
+              placeholder="Например: Поиск цифрового следа"
+            >
+          </div>
+
+          <div class="form-group">
+            <label for="ctfCreateDescription">Описание задания</label>
+            <textarea
+              id="ctfCreateDescription"
+              required
+              rows="5"
+              placeholder="Опишите условия задания..."
+            ></textarea>
+          </div>
+
+          <div class="form-group">
+            <label for="ctfCreateDifficulty">Сложность</label>
+            <select id="ctfCreateDifficulty">
+              <option value="easy">Лёгкая</option>
+              <option value="medium" selected>Средняя</option>
+              <option value="hard">Сложная</option>
+              <option value="expert">Экспертная</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="ctfCreatePoints">Максимальное количество баллов</label>
+            <input
+              type="number"
+              id="ctfCreatePoints"
+              min="1"
+              max="10000"
+              value="100"
+              required
+            >
+          </div>
+
+          <button type="submit" class="btn">
+            Опубликовать задание
+          </button>
+
+          <p class="form-message" id="ctfCreateMessage"></p>
+
+        </form>
+
+      </div>
+
+
+      <!-- Список заданий и рабочая область -->
+      <div class="ctf-content">
+
+        <div class="ctf-sidebar">
+
+          <div class="ctf-list-header">
+            <h2>Доступные задания</h2>
+            <button
+              class="btn btn-outline"
+              id="ctfRefreshBtn"
+              type="button"
+            >
+              Обновить
+            </button>
+          </div>
+
+          <div class="ctf-list" id="ctfChallengesList">
+            <p class="ctf-empty">Загрузка заданий...</p>
+          </div>
+
+        </div>
+
+
+        <!-- Рабочая область задания -->
+        <div class="ctf-workspace" id="ctfWorkspace" hidden>
+
+          <div class="ctf-task-header">
+
+            <div>
+              <p class="ctf-task-label">Текущее задание</p>
+              <h2 id="ctfTaskTitle">Название задания</h2>
+            </div>
+
+            <span class="ctf-status" id="ctfTaskStatus">
+              Не начато
+            </span>
+
+          </div>
+
+
+          <div class="ctf-task-info">
+
+            <div class="ctf-task-description" id="ctfTaskDescription">
+              Выберите задание из списка.
+            </div>
+
+            <div class="ctf-task-meta">
+              <span id="ctfTaskDifficulty">Сложность: —</span>
+              <span id="ctfTaskPoints">Баллы: —</span>
+            </div>
+
+          </div>
+
+
+          <!-- Чат с решением -->
+          <div class="ctf-chat-container">
+
+            <div class="ctf-chat-header">
+              <h3>Рабочее пространство</h3>
+              <p>
+                Отправляйте сюда ход расследования, найденные данные
+                и итоговое решение.
+              </p>
+            </div>
+
+            <div class="ctf-chat" id="ctfMessages">
+
+              <div class="ctf-empty">
+                Здесь появятся ваши сообщения.
+              </div>
+
+            </div>
+
+
+            <form class="ctf-message-form" id="ctfMessageForm">
+
+              <textarea
+                id="ctfMessageInput"
+                rows="3"
+                placeholder="Введите сообщение или результаты расследования..."
+                required
+              ></textarea>
+
+              <div class="ctf-message-actions">
+
+                <span class="ctf-message-hint">
+                  Не отправляйте решение на проверку, пока не закончите работу.
+                </span>
+
+                <div>
+                  <button
+                    type="submit"
+                    class="btn btn-outline"
+                    id="ctfSendMessageBtn"
+                  >
+                    Отправить
+                  </button>
+
+                  <button
+                    type="button"
+                    class="btn"
+                    id="ctfSubmitBtn"
+                  >
+                    Отправить на проверку
+                  </button>
+                </div>
+
+              </div>
+
+            </form>
+
+          </div>
+
+
+          <!-- Результат проверки -->
+          <div class="ctf-feedback" id="ctfFeedback" hidden>
+
+            <h3>Результат проверки</h3>
+
+            <div class="ctf-feedback-score">
+              <span>Полученные баллы:</span>
+              <strong id="ctfFeedbackScore">0</strong>
+            </div>
+
+            <p id="ctfFeedbackText"></p>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <button
+        class="btn btn-outline"
+        id="ctfBackBtn"
+        type="button"
+      >
+        ← На главную
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- Модерация CTF -->
+  <section class="ctf-page ctf-mod-page" id="ctfModPage" hidden>
+
+    <div class="ctf-container">
+
+      <header class="ctf-header">
+
+        <div>
+          <p class="hero-label">Administration · Review</p>
+          <h1>Модерация CTF</h1>
+          <p class="ctf-description">
+            Проверка решений участников, обратная связь и начисление баллов.
+          </p>
+        </div>
+
+      </header>
+
+
+      <div class="ctf-mod-layout">
+
+        <!-- Очередь работ -->
+        <div class="ctf-mod-sidebar">
+
+          <div class="ctf-list-header">
+            <h2>Работы участников</h2>
+          </div>
+
+          <div class="form-group">
+            <label for="ctfModStatusFilter">Фильтр по статусу</label>
+
+            <select id="ctfModStatusFilter">
+              <option value="">Все работы</option>
+              <option value="in_progress">В процессе</option>
+              <option value="pending">Ожидают проверки</option>
+              <option value="graded">Проверены</option>
+            </select>
+          </div>
+
+          <div class="ctf-list" id="ctfModSubmissions">
+            <p class="ctf-empty">Загрузка работ...</p>
+          </div>
+
+        </div>
+
+
+        <!-- Проверка работы -->
+        <div class="ctf-mod-workspace" id="ctfModWorkspace" hidden>
+
+          <div class="ctf-task-header">
+
+            <div>
+              <p class="ctf-task-label">Проверка решения</p>
+              <h2 id="ctfModSubmissionTitle">
+                Выберите работу
+              </h2>
+            </div>
+
+            <span class="ctf-status" id="ctfModSubmissionStatus">
+              —
+            </span>
+
+          </div>
+
+
+          <div class="ctf-mod-info">
+
+            <div class="info-row">
+              <span class="info-label">Участник</span>
+              <span class="info-value" id="ctfModUsername">—</span>
+            </div>
+
+            <div class="info-row">
+              <span class="info-label">Задание</span>
+              <span class="info-value" id="ctfModChallengeTitle">—</span>
+            </div>
+
+            <div class="info-row">
+              <span class="info-label">Дата отправки</span>
+              <span class="info-value" id="ctfModSubmissionDate">—</span>
+            </div>
+
+          </div>
+
+
+          <!-- Переписка -->
+          <div class="ctf-chat-container">
+
+            <div class="ctf-chat-header">
+              <h3>Переписка</h3>
+              <p>
+                История сообщений участника и модератора.
+              </p>
+            </div>
+
+            <div class="ctf-chat" id="ctfModMessages">
+              <div class="ctf-empty">
+                Выберите работу для просмотра.
+              </div>
+            </div>
+
+
+            <form class="ctf-message-form" id="ctfModMessageForm">
+
+              <textarea
+                id="ctfModMessageInput"
+                rows="3"
+                placeholder="Написать участнику..."
+                required
+              ></textarea>
+
+              <button type="submit" class="btn">
+                Отправить сообщение
+              </button>
+
+            </form>
+
+          </div>
+
+
+          <!-- Оценивание -->
+          <div class="ctf-grade-card">
+
+            <h3>Оценивание работы</h3>
+
+            <form id="ctfGradeForm">
+
+              <div class="form-group">
+                <label for="ctfGradeScore">
+                  Начисленные баллы
+                </label>
+
+                <input
+                  type="number"
+                  id="ctfGradeScore"
+                  min="0"
+                  value="0"
+                  required
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="ctfGradeFeedback">
+                  Комментарий модератора
+                </label>
+
+                <textarea
+                  id="ctfGradeFeedback"
+                  rows="4"
+                  placeholder="Объясните результат проверки..."
+                ></textarea>
+              </div>
+
+              <button type="submit" class="btn">
+                Сохранить результат
+              </button>
+
+              <p class="form-message" id="ctfGradeMessage"></p>
+
+            </form>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <button
+        class="btn btn-outline"
+        id="ctfModBackBtn"
+        type="button"
+      >
+        ← На главную
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- Подвал -->
   <footer class="footer" id="siteFooter">
     <p>© 2026 Minimal Studio</p>
   </footer>
 
-  <div class="modal-overlay" id="authModal" hidden>
-    <div class="modal">
-      <button class="modal-close" id="modalClose" aria-label="Закрыть">×</button>
 
+  <!-- Модальное окно авторизации -->
+  <div class="modal-overlay" id="authModal" hidden>
+
+    <div class="modal">
+
+      <button
+        class="modal-close"
+        id="modalClose"
+        aria-label="Закрыть"
+      >
+        ×
+      </button>
+
+
+      <!-- Вход -->
       <div class="auth-form" id="loginForm">
+
         <h2>Вход</h2>
         <p class="auth-sub">Войдите в свой аккаунт</p>
+
         <form id="loginFormEl">
+
           <div class="form-group">
             <label for="loginEmail">Email</label>
-            <input type="email" id="loginEmail" required placeholder="you@example.com">
+
+            <input
+              type="email"
+              id="loginEmail"
+              required
+              placeholder="you@example.com"
+            >
           </div>
+
           <div class="form-group">
             <label for="loginPassword">Пароль</label>
-            <input type="password" id="loginPassword" required minlength="6" placeholder="••••••••">
+
+            <input
+              type="password"
+              id="loginPassword"
+              required
+              minlength="6"
+              placeholder="••••••••"
+            >
           </div>
+
           <p class="form-error" id="loginError"></p>
-          <button type="submit" class="btn btn-full">Войти</button>
+
+          <button type="submit" class="btn btn-full">
+            Войти
+          </button>
+
         </form>
+
         <p class="auth-switch">
-          Нет аккаунта? <button type="button" id="showRegister">Зарегистрироваться</button>
+          Нет аккаунта?
+          <button type="button" id="showRegister">
+            Зарегистрироваться
+          </button>
         </p>
+
       </div>
 
+
+      <!-- Регистрация -->
       <div class="auth-form" id="registerForm" hidden>
+
         <h2>Регистрация</h2>
         <p class="auth-sub">Создайте новый аккаунт</p>
+
         <form id="registerFormEl">
+
           <div class="form-group">
             <label for="regName">Имя</label>
-            <input type="text" id="regName" required minlength="2" placeholder="Как вас зовут">
+
+            <input
+              type="text"
+              id="regName"
+              required
+              minlength="2"
+              placeholder="Как вас зовут"
+            >
           </div>
+
           <div class="form-group">
             <label for="regEmail">Email</label>
-            <input type="email" id="regEmail" required placeholder="you@example.com">
+
+            <input
+              type="email"
+              id="regEmail"
+              required
+              placeholder="you@example.com"
+            >
           </div>
+
           <div class="form-group">
             <label for="regPassword">Пароль</label>
-            <input type="password" id="regPassword" required minlength="6" placeholder="Минимум 6 символов">
+
+            <input
+              type="password"
+              id="regPassword"
+              required
+              minlength="6"
+              placeholder="Минимум 6 символов"
+            >
           </div>
+
           <div class="form-group">
             <label for="regPassword2">Повторите пароль</label>
-            <input type="password" id="regPassword2" required minlength="6" placeholder="••••••••">
+
+            <input
+              type="password"
+              id="regPassword2"
+              required
+              minlength="6"
+              placeholder="••••••••"
+            >
           </div>
+
           <p class="form-error" id="registerError"></p>
-          <button type="submit" class="btn btn-full">Создать аккаунт</button>
+
+          <button type="submit" class="btn btn-full">
+            Создать аккаунт
+          </button>
+
         </form>
+
         <p class="auth-switch">
-          Уже есть аккаунт? <button type="button" id="showLogin">Войти</button>
+          Уже есть аккаунт?
+          <button type="button" id="showLogin">
+            Войти
+          </button>
         </p>
+
       </div>
+
     </div>
+
   </div>
 
+
   <script src="{{ url_for('static', filename='script.js') }}"></script>
+
 </body>
 </html>
