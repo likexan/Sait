@@ -1275,12 +1275,11 @@ const isCurrentUser = user =>
 
             return `
 <article
-    class="leaderboard-podium-card rank-${rank} leaderboard-clickable"
+    class="leaderboard-podium-card rank-${rank} leaderboard-clickable ${isCurrentUser(user) ? 'current-user' : ''}"
     data-profile-user="${getUserId(user)}"
     role="button"
     tabindex="0"
     aria-label="Открыть профиль ${escapeHtml(user.name)}"
-    ${isCurrentUser(user) ? 'is-current-user' : ''}
 >
 
                     <div class="leaderboard-podium-top">
@@ -1327,12 +1326,11 @@ const isCurrentUser = user =>
 
             return `
 <div
-    class="leaderboard-row leaderboard-clickable"
+    class="leaderboard-row leaderboard-clickable ${isCurrentUser(user) ? 'current-user' : ''}"
     data-profile-user="${getUserId(user)}"
     role="button"
     tabindex="0"
     aria-label="Открыть профиль ${escapeHtml(user.name)}"
-    ${isCurrentUser(user) ? 'is-current-user' : ''}
 >
 
                     <div class="leaderboard-row-rank">

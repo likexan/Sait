@@ -787,8 +787,7 @@ def register():
             "error": "Этот email уже зарегистрирован"
         }), 409
 
-    is_first = User.query.count() == 0
-    role = "admin" if is_first else "member"
+    role = "member"
 
     user = User(
         name=name,
@@ -803,11 +802,6 @@ def register():
 
     add_activity(user, "Регистрация аккаунта")
 
-    if is_first:
-        add_activity(
-            user,
-            "Назначена роль Администратор (первый пользователь)"
-        )
 
     session["user_id"] = user.id
     session.permanent = True
@@ -869,9 +863,21 @@ def update_profile():
     user = current_user()
     data = request.get_json(silent=True) or {}
 
-    name = (data.get("name") or "").strip()
+    raw_name = data.get("name", "")
     bio = data.get("bio", "")
-    telegram = (data.get("telegram") or "").strip()
+    raw_telegram = data.get("telegram", "")
+
+    if not isinstance(raw_name, str):
+        return jsonify({"error": "Имя должно быть текстом"}), 400
+
+    if not isinstance(bio, str):
+        return jsonify({"error": "Биография должна быть текстом"}), 400
+
+    if not isinstance(raw_telegram, str):
+        return jsonify({"error": "Telegram должен быть текстом"}), 400
+
+    name = raw_name.strip()
+    telegram = raw_telegram.strip()
 
     if len(name) < 2:
         return jsonify({
@@ -1575,10 +1581,25 @@ def update_ctf_challenge(challenge_id):
 
     data = request.get_json(silent=True) or {}
 
-    title = data.get("title", "").strip()
-    description = data.get("description", "").strip()
+    raw_title = data.get("title", "")
+    raw_description = data.get("description", "")
     difficulty = data.get("difficulty")
     max_points = data.get("max_points")
+
+    if not isinstance(raw_title, str):
+        return jsonify({
+            "success": False,
+            "error": "Название должно быть текстом"
+        }), 400
+
+    if not isinstance(raw_description, str):
+        return jsonify({
+            "success": False,
+            "error": "Описание должно быть текстом"
+        }), 400
+
+    title = raw_title.strip()
+    description = raw_description.strip()
 
     if not title or not description:
         return jsonify({
