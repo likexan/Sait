@@ -1,4 +1,3 @@
-
 // ============================================================
 // THEME
 // ============================================================
@@ -449,8 +448,7 @@ logoutBtn.addEventListener('click', async () => {
             method: 'POST'
         });
     } catch (_) {
-        // Даже если запрос завершился ошибкой,
-        // локально сбрасываем состояние авторизации.
+        // Локально сбрасываем состояние авторизации.
     }
 
     currentUser = null;
@@ -471,6 +469,7 @@ function hideAllPages() {
     cabinet.hidden = true;
     ctfPage.hidden = true;
     ctfModPage.hidden = true;
+    ctfLeaderboardPage.hidden = true;
     siteFooter.hidden = true;
 }
 
@@ -747,6 +746,27 @@ const ctfModNavLink = document.getElementById('ctfModNavLink');
 const ctfPage = document.getElementById('ctfPage');
 const ctfModPage = document.getElementById('ctfModPage');
 
+// LEADERBOARD ELEMENTS
+const ctfLeaderboardNavLink = document.getElementById(
+    'ctfLeaderboardNavLink'
+);
+
+const ctfLeaderboardPage = document.getElementById(
+    'ctfLeaderboardPage'
+);
+
+const ctfLeaderboardContent = document.getElementById(
+    'ctfLeaderboardContent'
+);
+
+const ctfLeaderboardRefreshBtn = document.getElementById(
+    'ctfLeaderboardRefreshBtn'
+);
+
+const ctfLeaderboardBackBtn = document.getElementById(
+    'ctfLeaderboardBackBtn'
+);
+
 const ctfAdminActions = document.getElementById('ctfAdminActions');
 const ctfCreateToggle = document.getElementById('ctfCreateToggle');
 const ctfCreateCard = document.getElementById('ctfCreateCard');
@@ -881,6 +901,29 @@ async function showCTFMod() {
     await loadCTFModerationQueue();
 }
 
+
+// ============================================================
+// LEADERBOARD NAVIGATION
+// ============================================================
+
+async function showCTFLeaderboard() {
+    if (!currentUser) {
+        showLoginRequired();
+        return;
+    }
+
+    hideAllPages();
+
+    ctfLeaderboardPage.hidden = false;
+
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+
+    await loadCTFLeaderboard();
+}
+
 ctfNavLink.addEventListener('click', (e) => {
     e.preventDefault();
     showCTF();
@@ -891,6 +934,17 @@ ctfModNavLink.addEventListener('click', (e) => {
     showCTFMod();
 });
 
+ctfLeaderboardNavLink?.addEventListener('click', (e) => {
+    e.preventDefault();
+    showCTFLeaderboard();
+});
+
+ctfLeaderboardRefreshBtn?.addEventListener('click', () => {
+    loadCTFLeaderboard();
+});
+
+ctfLeaderboardBackBtn?.addEventListener('click', showMain);
+
 document.getElementById('ctfBackBtn')
     .addEventListener('click', showMain);
 
@@ -899,6 +953,92 @@ document.getElementById('ctfModBackBtn')
 
 document.getElementById('ctfRefreshBtn')
     .addEventListener('click', loadCTFChallenges);
+
+
+// ============================================================
+// LOAD LEADERBOARD
+// ============================================================
+
+async function loadCTFLeaderboard() {
+    if (!ctfLeaderboardContent) return;
+
+    ctfLeaderboardContent.innerHTML = `
+        <p class="ctf-empty">Загрузка рейтинга...</p>
+    `;
+
+    if (ctfLeaderboardRefreshBtn) {
+        ctfLeaderboardRefreshBtn.disabled = true;
+    }
+
+    try {
+        const data = await api('/api/ctf/leaderboard');
+
+        if (!data.success) {
+            throw new Error('Не удалось загрузить рейтинг.');
+        }
+
+        const leaderboard = data.leaderboard || [];
+
+        if (!leaderboard.length) {
+            ctfLeaderboardContent.innerHTML = `
+                <p class="ctf-empty">
+                    Пока никто не набрал баллы.
+                </p>
+            `;
+            return;
+        }
+
+        ctfLeaderboardContent.innerHTML = `
+            <div class="ctf-leaderboard-table-wrap">
+                <table class="ctf-leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Место</th>
+                            <th>Участник</th>
+                            <th>Баллы</th>
+                            <th>Решено заданий</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        ${leaderboard.map(user => `
+                            <tr>
+                                <td>
+                                    <strong>#${Number(user.rank) || '—'}</strong>
+                                </td>
+
+                                <td>
+                                    ${escapeHtml(user.name)}
+                                </td>
+
+                                <td>
+                                    <strong>
+                                        ${Number(user.points) || 0}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    ${Number(user.completed) || 0}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+
+    } catch (err) {
+        ctfLeaderboardContent.innerHTML = `
+            <p class="ctf-empty">
+                ${escapeHtml(err.message)}
+            </p>
+        `;
+    } finally {
+        if (ctfLeaderboardRefreshBtn) {
+            ctfLeaderboardRefreshBtn.disabled = false;
+        }
+    }
+}
 
 
 // ============================================================
@@ -1041,7 +1181,6 @@ async function openCTFChallenge(challengeId) {
 
         document.getElementById('ctfMessageInput').disabled = locked;
         document.getElementById('ctfSubmitBtn').disabled = locked;
-
         document.getElementById('ctfSendMessageBtn').disabled = locked;
 
         const feedback = document.getElementById('ctfFeedback');

@@ -638,6 +638,56 @@ def get_ctf_challenges():
         "challenges": result
     })
 
+# ============================================================
+# CTF: LEADERBOARD
+# ============================================================
+
+@app.route("/api/ctf/leaderboard", methods=["GET"])
+@login_required
+def get_ctf_leaderboard():
+    rows = (
+        db.session.query(
+            User.id.label("user_id"),
+            User.name.label("name"),
+            db.func.sum(CTFSubmission.score).label("total_points"),
+            db.func.count(CTFSubmission.id).label("completed")
+        )
+        .join(
+            CTFSubmission,
+            CTFSubmission.user_id == User.id
+        )
+        .filter(CTFSubmission.status == "graded")
+        .group_by(User.id, User.name)
+        .order_by(
+            db.func.sum(CTFSubmission.score).desc(),
+            User.name.asc()
+        )
+        .all()
+    )
+
+    leaderboard = []
+    previous_points = None
+    current_rank = 0
+
+    for position, row in enumerate(rows, start=1):
+        points = int(row.total_points or 0)
+
+        if points != previous_points:
+            current_rank = position
+            previous_points = points
+
+        leaderboard.append({
+            "rank": current_rank,
+            "user_id": row.user_id,
+            "name": row.name,
+            "points": points,
+            "completed": row.completed
+        })
+
+    return jsonify({
+        "success": True,
+        "leaderboard": leaderboard
+    })
 
 # ============================================================
 # CTF: CREATE CHALLENGE

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -29,6 +28,9 @@
       <li><a href="#" id="ctfNavLink">CTF</a></li>
       <li>
         <a href="#" id="ctfModNavLink" hidden>Модерация CTF</a>
+      </li>
+      <li>
+        <a href="#" id="ctfLeaderboardNavLink">Список лидеров</a>
       </li>
     </ul>
 
@@ -692,6 +694,54 @@
       <button
         class="btn btn-outline"
         id="ctfModBackBtn"
+        type="button"
+      >
+        ← На главную
+      </button>
+
+    </div>
+
+  </section>
+
+
+  <!-- Список лидеров CTF -->
+  <section class="ctf-page ctf-leaderboard-page" id="ctfLeaderboardPage" hidden>
+
+    <div class="ctf-container">
+
+      <header class="ctf-header">
+        <div>
+          <p class="hero-label">OSINT · Competition · Ranking</p>
+          <h1>Список лидеров</h1>
+          <p class="ctf-description">
+            Участники с наибольшим количеством баллов за проверенные CTF-задания.
+          </p>
+        </div>
+      </header>
+
+      <div class="ctf-leaderboard-panel">
+
+        <div class="ctf-list-header">
+          <h2>Таблица лидеров</h2>
+
+          <button
+            class="btn btn-outline"
+            id="ctfLeaderboardRefreshBtn"
+            type="button"
+          >
+            Обновить
+          </button>
+        </div>
+
+        <div id="ctfLeaderboardContent">
+          <p class="ctf-empty">Загрузка рейтинга...</p>
+        </div>
+
+      </div>
+
+      <button
+        class="btn btn-outline"
+        id="ctfLeaderboardBackBtn"
         type="button"
       >
         ← На главную
