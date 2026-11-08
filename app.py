@@ -1,13 +1,17 @@
-
+import os
+import uuid
 from datetime import datetime
 from functools import wraps
+from html import escape
+from html.parser import HTMLParser
 
 from flask import (
     Flask, render_template, request, jsonify, session
 )
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import UniqueConstraint, text, inspect
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 
 
 # ============================================================
@@ -16,11 +20,32 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 
-app.config["SECRET_KEY"] = "minimal-dev-secret-change-in-production"
+app.config["SECRET_KEY"] = os.environ.get(
+    "SECRET_KEY",
+    "minimal-dev-secret-change-in-production"
+)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///minimal.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["MAX_CONTENT_LENGTH"] = 25 * 1024 * 1024
 
 db = SQLAlchemy(app)
+
+ARTICLE_UPLOAD_FOLDER = os.path.join(
+    app.static_folder,
+    "uploads",
+    "articles"
+)
+
+os.makedirs(ARTICLE_UPLOAD_FOLDER, exist_ok=True)
+
+ALLOWED_IMAGE_EXTENSIONS = {
+    "png", "jpg", "jpeg", "webp", "gif"
+}
+
+ALLOWED_MEDIA_EXTENSIONS = {
+    "png", "jpg", "jpeg", "webp", "gif",
+    "mp4", "webm", "mp3", "wav", "ogg", "m4a"
+}
 
 
 # ============================================================
@@ -115,7 +140,6 @@ class CTFChallenge(db.Model):
     __tablename__ = "ctf_challenges"
 
     id = db.Column(db.Integer, primary_key=True)
-
     title = db.Column(db.String(150), nullable=False)
     description = db.Column(db.Text, nullable=False)
 
@@ -157,10 +181,7 @@ class CTFChallenge(db.Model):
             "max_points": self.max_points,
             "is_published": self.is_published,
             "created_at": self.created_at.isoformat() + "Z",
-            "submission": (
-                submission.to_dict()
-                if submission else None
-            )
+            "submission": submission.to_dict() if submission else None
         }
 
 
@@ -275,8 +296,181 @@ class CTFMessage(db.Model):
 
 
 # ============================================================
+# ARTICLES MODEL
+# ============================================================
+
+class Article(db.Model):
+    __tablename__ = "articles"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    title = db.Column(db.String(200), nullable=False)
+    excerpt = db.Column(db.String(500), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+
+    preview = db.Column(db.String(500), nullable=True)
+    author = db.Column(db.String(120), nullable=False)
+
+    created_by = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=False
+    )
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow
+    )
+
+    updated_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow
+    )
+
+    is_published = db.Column(
+        db.Boolean,
+        nullable=False,
+        default=True
+    )
+
+    def to_dict(self):
+        user = db.session.get(User, self.created_by)
+
+        return {
+            "id": self.id,
+            "title": self.title,
+            "excerpt": self.excerpt,
+            "content": self.content,
+            "preview": self.preview,
+            "author": self.author,
+            "created_by": self.created_by,
+            "creator_name": user.name if user else "Неизвестный",
+            "created_at": self.created_at.isoformat() + "Z",
+            "updated_at": self.updated_at.isoformat() + "Z",
+            "is_published": self.is_published
+        }
+
+
+# ============================================================
+# ARTICLE HTML SANITIZER
+# ============================================================
+
+ARTICLE_TAGS = {
+    "p", "br",
+    "h2", "h3", "h4",
+    "strong", "b",
+    "em", "i",
+    "u", "s",
+    "code", "pre",
+    "ol", "ul", "li",
+    "blockquote",
+    "small",
+    "img",
+    "video", "audio", "source"
+}
+
+VOID_TAGS = {"br", "img"}
+
+
+class ArticleHTMLSanitizer(HTMLParser):
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.result = []
+        self.stack = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag not in ARTICLE_TAGS:
+            return
+
+        attrs = dict(attrs)
+        safe_attrs = []
+
+        if tag == "img":
+            src = attrs.get("src", "")
+
+            if not src.startswith("/static/uploads/articles/"):
+                return
+
+            safe_attrs.append(("src", src))
+            safe_attrs.append((
+                "alt",
+                attrs.get("alt", "")[:300]
+            ))
+
+        elif tag in ("video", "audio", "source"):
+            src = attrs.get("src", "")
+
+            if not src.startswith("/static/uploads/articles/"):
+                return
+
+            safe_attrs.append(("src", src))
+
+            if tag in ("video", "audio"):
+                safe_attrs.append(("controls", "controls"))
+
+            if tag == "video":
+                safe_attrs.append(("preload", "metadata"))
+
+            if tag == "source":
+                media_type = attrs.get("type", "")
+
+                if media_type.startswith(("video/", "audio/")):
+                    safe_attrs.append(("type", media_type))
+
+        attr_text = "".join(
+            f' {name}="{escape(value, quote=True)}"'
+            for name, value in safe_attrs
+        )
+
+        self.result.append(f"<{tag}{attr_text}>")
+
+        if tag not in VOID_TAGS:
+            self.stack.append(tag)
+
+    def handle_endtag(self, tag):
+        if tag not in self.stack:
+            return
+
+        while self.stack:
+            current = self.stack.pop()
+            self.result.append(f"</{current}>")
+
+            if current == tag:
+                break
+
+    def handle_data(self, data):
+        self.result.append(escape(data))
+
+    def get_html(self):
+        while self.stack:
+            self.result.append(f"</{self.stack.pop()}>")
+
+        return "".join(self.result)
+
+
+def sanitize_article_html(content):
+    if not isinstance(content, str):
+        return ""
+
+    parser = ArticleHTMLSanitizer()
+    parser.feed(content)
+    return parser.get_html()
+
+
+# ============================================================
 # AUTH HELPERS
 # ============================================================
+
+def current_user():
+    user_id = session.get("user_id")
+
+    if not user_id:
+        return None
+
+    return db.session.get(User, user_id)
+
 
 def login_required(f):
     @wraps(f)
@@ -314,15 +508,6 @@ def role_required(*roles):
         return decorated
 
     return decorator
-
-
-def current_user():
-    user_id = session.get("user_id")
-
-    if not user_id:
-        return None
-
-    return db.session.get(User, user_id)
 
 
 def add_activity(user, text):
@@ -366,20 +551,84 @@ def get_submission_messages(submission_id):
 
 
 def validate_message(data):
-    text = data.get("text", "")
+    message_text = data.get("text", "")
 
-    if not isinstance(text, str):
+    if not isinstance(message_text, str):
         return None, "Сообщение должно быть текстом"
 
-    text = text.strip()
+    message_text = message_text.strip()
 
-    if not text:
+    if not message_text:
         return None, "Сообщение не может быть пустым"
 
-    if len(text) > 20000:
+    if len(message_text) > 20000:
         return None, "Сообщение слишком длинное"
 
-    return text, None
+    return message_text, None
+
+
+# ============================================================
+# ARTICLE HELPERS
+# ============================================================
+
+def article_upload(file, image_only=False):
+    if not file or not file.filename:
+        return None, "Файл не выбран"
+
+    filename = secure_filename(file.filename)
+
+    if "." not in filename:
+        return None, "Некорректный файл"
+
+    extension = filename.rsplit(".", 1)[1].lower()
+
+    allowed = (
+        ALLOWED_IMAGE_EXTENSIONS
+        if image_only
+        else ALLOWED_MEDIA_EXTENSIONS
+    )
+
+    if extension not in allowed:
+        return None, "Неподдерживаемый формат файла"
+
+    unique_name = f"{uuid.uuid4().hex}.{extension}"
+    path = os.path.join(ARTICLE_UPLOAD_FOLDER, unique_name)
+
+    try:
+        file.save(path)
+    except OSError:
+        return None, "Не удалось сохранить файл"
+
+    return f"/static/uploads/articles/{unique_name}", None
+
+
+def article_form_data():
+    title = request.form.get("title", "").strip()
+    excerpt = request.form.get("excerpt", "").strip()
+    author = request.form.get("author", "").strip()
+    content = request.form.get("content", "")
+
+    if not all((title, excerpt, author, content.strip())):
+        return None, "Заполните все обязательные поля"
+
+    if len(title) > 200:
+        return None, "Название слишком длинное"
+
+    if len(excerpt) > 500:
+        return None, "Описание слишком длинное"
+
+    if len(author) > 120:
+        return None, "Имя автора слишком длинное"
+
+    if len(content) > 500000:
+        return None, "Содержимое статьи слишком большое"
+
+    return {
+        "title": title,
+        "excerpt": excerpt,
+        "author": author,
+        "content": sanitize_article_html(content)
+    }, None
 
 
 # ============================================================
@@ -476,7 +725,6 @@ def login():
 @app.route("/api/logout", methods=["POST"])
 def logout():
     session.clear()
-
     return jsonify({"ok": True})
 
 
@@ -500,7 +748,6 @@ def me():
 @login_required
 def update_profile():
     user = current_user()
-
     data = request.get_json(silent=True) or {}
     name = (data.get("name") or "").strip()
 
@@ -562,7 +809,6 @@ def list_users():
 @role_required("admin")
 def set_user_role(user_id):
     data = request.get_json(silent=True) or {}
-
     role = (data.get("role") or "").strip().lower()
 
     if role not in ROLES:
@@ -607,6 +853,221 @@ def set_user_role(user_id):
 
 
 # ============================================================
+# ARTICLES API
+# ============================================================
+
+@app.route("/api/articles", methods=["GET"])
+def get_articles():
+    user = current_user()
+
+    query = Article.query
+
+    if not user or user.role not in ("admin", "moderator"):
+        query = query.filter_by(is_published=True)
+
+    articles = query.order_by(
+        Article.created_at.desc()
+    ).all()
+
+    return jsonify({
+        "success": True,
+        "articles": [article.to_dict() for article in articles]
+    })
+
+
+@app.route("/api/articles/<int:article_id>", methods=["GET"])
+def get_article(article_id):
+    article = db.session.get(Article, article_id)
+
+    if not article:
+        return jsonify({
+            "success": False,
+            "error": "Статья не найдена"
+        }), 404
+
+    user = current_user()
+
+    if not article.is_published:
+        if not user or user.role not in ("admin", "moderator"):
+            return jsonify({
+                "success": False,
+                "error": "Статья не найдена"
+            }), 404
+
+    return jsonify({
+        "success": True,
+        "article": article.to_dict()
+    })
+
+
+@app.route("/api/articles", methods=["POST"])
+@role_required("admin", "moderator")
+def create_article():
+    user = current_user()
+
+    form_data, error = article_form_data()
+
+    if error:
+        return jsonify({
+            "success": False,
+            "error": error
+        }), 400
+
+    preview = None
+    preview_file = request.files.get("preview")
+
+    if preview_file and preview_file.filename:
+        preview, error = article_upload(
+            preview_file,
+            image_only=True
+        )
+
+        if error:
+            return jsonify({
+                "success": False,
+                "error": error
+            }), 400
+
+    article = Article(
+        title=form_data["title"],
+        excerpt=form_data["excerpt"],
+        content=form_data["content"],
+        preview=preview,
+        author=form_data["author"],
+        created_by=user.id,
+        is_published=True
+    )
+
+    db.session.add(article)
+    db.session.commit()
+
+    add_activity(
+        user,
+        f"Опубликована статья: {article.title}"
+    )
+
+    return jsonify({
+        "success": True,
+        "message": "Статья опубликована",
+        "article": article.to_dict()
+    }), 201
+
+
+@app.route("/api/articles/<int:article_id>", methods=["PUT"])
+@role_required("admin", "moderator")
+def update_article(article_id):
+    user = current_user()
+
+    article = db.session.get(Article, article_id)
+
+    if not article:
+        return jsonify({
+            "success": False,
+            "error": "Статья не найдена"
+        }), 404
+
+    form_data, error = article_form_data()
+
+    if error:
+        return jsonify({
+            "success": False,
+            "error": error
+        }), 400
+
+    preview_file = request.files.get("preview")
+
+    if preview_file and preview_file.filename:
+        preview, error = article_upload(
+            preview_file,
+            image_only=True
+        )
+
+        if error:
+            return jsonify({
+                "success": False,
+                "error": error
+            }), 400
+
+        article.preview = preview
+
+    article.title = form_data["title"]
+    article.excerpt = form_data["excerpt"]
+    article.author = form_data["author"]
+    article.content = form_data["content"]
+
+    db.session.commit()
+
+    add_activity(
+        user,
+        f"Изменена статья: {article.title}"
+    )
+
+    return jsonify({
+        "success": True,
+        "message": "Статья обновлена",
+        "article": article.to_dict()
+    })
+
+
+@app.route("/api/articles/<int:article_id>", methods=["DELETE"])
+@role_required("admin", "moderator")
+def delete_article(article_id):
+    user = current_user()
+
+    article = db.session.get(Article, article_id)
+
+    if not article:
+        return jsonify({
+            "success": False,
+            "error": "Статья не найдена"
+        }), 404
+
+    title = article.title
+
+    db.session.delete(article)
+    db.session.commit()
+
+    add_activity(
+        user,
+        f"Удалена статья: {title}"
+    )
+
+    return jsonify({
+        "success": True,
+        "message": "Статья удалена"
+    })
+
+
+@app.route("/api/articles/upload-media", methods=["POST"])
+@role_required("admin", "moderator")
+def upload_article_media():
+    file = request.files.get("file")
+
+    media_url, error = article_upload(file)
+
+    if error:
+        return jsonify({
+            "success": False,
+            "error": error
+        }), 400
+
+    extension = media_url.rsplit(".", 1)[1].lower()
+
+    if extension in ALLOWED_IMAGE_EXTENSIONS:
+        media_type = "image"
+    elif extension in {"mp4", "webm"}:
+        media_type = "video"
+    else:
+        media_type = "audio"
+
+    return jsonify({
+        "success": True,
+        "url": media_url,
+        "type": media_type
+    }), 201
+
+
+# ============================================================
 # CTF: CHALLENGE LIST
 # ============================================================
 
@@ -637,6 +1098,7 @@ def get_ctf_challenges():
         "success": True,
         "challenges": result
     })
+
 
 # ============================================================
 # CTF: LEADERBOARD
@@ -688,6 +1150,7 @@ def get_ctf_leaderboard():
         "success": True,
         "leaderboard": leaderboard
     })
+
 
 # ============================================================
 # CTF: CREATE CHALLENGE
@@ -848,7 +1311,7 @@ def send_ctf_message(challenge_id):
             "error": "CTF не найден"
         }), 404
 
-    text, error = validate_message(data)
+    message_text, error = validate_message(data)
 
     if error:
         return jsonify({
@@ -878,7 +1341,7 @@ def send_ctf_message(challenge_id):
     message = CTFMessage(
         submission_id=submission.id,
         sender_id=user.id,
-        text=text
+        text=message_text
     )
 
     db.session.add(message)
@@ -1032,7 +1495,7 @@ def send_ctf_moderator_message(submission_id):
 
     data = request.get_json(silent=True) or {}
 
-    text, error = validate_message(data)
+    message_text, error = validate_message(data)
 
     if error:
         return jsonify({
@@ -1043,7 +1506,7 @@ def send_ctf_moderator_message(submission_id):
     message = CTFMessage(
         submission_id=submission.id,
         sender_id=user.id,
-        text=text
+        text=message_text
     )
 
     db.session.add(message)
@@ -1143,13 +1606,23 @@ def grade_ctf_submission(submission_id):
 
 
 # ============================================================
+# ERROR HANDLERS
+# ============================================================
+
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({
+        "success": False,
+        "error": "Файл слишком большой. Максимальный размер — 25 МБ."
+    }), 413
+
+
+# ============================================================
 # DATABASE INITIALIZATION
 # ============================================================
 
 with app.app_context():
     db.create_all()
-
-    from sqlalchemy import text, inspect
 
     inspector = inspect(db.engine)
 

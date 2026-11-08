@@ -4,15 +4,320 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0a0a0a">
-
     <title>blind — OSINT Platform</title>
-    <meta name="description" content="blind — платформа для OSINT-исследований, цифровых расследований и практических CTF-заданий.">
-
+    <meta name="description" content="blind — платформа для OSINT-исследований, цифровых расследований и CTF.">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* ARTICLES */
+        .articles-page {
+            min-height: 75vh;
+            padding: 100px 6% 70px;
+        }
+
+        .articles-container {
+            max-width: 1250px;
+            margin: auto;
+        }
+
+        .articles-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            gap: 25px;
+            margin-bottom: 45px;
+        }
+
+        .articles-header h1 {
+            font-size: clamp(36px, 5vw, 58px);
+            margin: 10px 0;
+        }
+
+        .articles-header p {
+            opacity: .65;
+            max-width: 600px;
+            line-height: 1.7;
+        }
+
+        .articles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 22px;
+        }
+
+        .article-card {
+            border: 1px solid var(--border-color, rgba(128,128,128,.2));
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform .2s, border-color .2s;
+            background: var(--card-bg, transparent);
+        }
+
+        .article-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent, #888);
+        }
+
+        .article-card-image {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            display: block;
+            background: rgba(128,128,128,.08);
+        }
+
+        .article-card-placeholder {
+            height: 190px;
+            display: grid;
+            place-items: center;
+            font-size: 40px;
+            opacity: .25;
+            background: rgba(128,128,128,.08);
+        }
+
+        .article-card-body {
+            padding: 22px;
+        }
+
+        .article-card-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            font-size: 11px;
+            opacity: .55;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 14px;
+        }
+
+        .article-card h3 {
+            font-size: 21px;
+            margin: 0 0 12px;
+        }
+
+        .article-card p {
+            font-size: 14px;
+            line-height: 1.7;
+            opacity: .65;
+            margin: 0;
+        }
+
+        .article-reader {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .article-reader-back {
+            margin-bottom: 35px;
+        }
+
+        .article-reader-preview {
+            width: 100%;
+            max-height: 440px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin-bottom: 35px;
+        }
+
+        .article-reader h1 {
+            font-size: clamp(32px, 5vw, 52px);
+            line-height: 1.15;
+            margin: 15px 0;
+        }
+
+        .article-reader-excerpt {
+            font-size: 18px;
+            line-height: 1.7;
+            opacity: .65;
+            margin-bottom: 25px;
+        }
+
+        .article-reader-meta {
+            opacity: .5;
+            font-size: 13px;
+            margin-bottom: 35px;
+        }
+
+        .article-content {
+            font-size: 16px;
+            line-height: 1.9;
+            overflow-wrap: anywhere;
+        }
+
+        .article-content h2 {
+            margin-top: 40px;
+            font-size: 28px;
+        }
+
+        .article-content h3 {
+            margin-top: 30px;
+            font-size: 22px;
+        }
+
+        .article-content blockquote {
+            border-left: 3px solid currentColor;
+            padding: 10px 22px;
+            opacity: .75;
+            margin: 25px 0;
+        }
+
+        .article-content pre {
+            padding: 20px;
+            overflow-x: auto;
+            border-radius: 8px;
+            background: rgba(128,128,128,.12);
+        }
+
+        .article-content code {
+            font-family: monospace;
+            background: rgba(128,128,128,.12);
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+        .article-content img,
+        .article-content video {
+            max-width: 100%;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+
+        .article-content audio {
+            max-width: 100%;
+            margin: 20px 0;
+        }
+
+        .article-admin-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 30px;
+        }
+
+        .article-editor {
+            border: 1px solid var(--border-color, rgba(128,128,128,.25));
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .article-editor h2 {
+            margin-top: 0;
+            margin-bottom: 25px;
+        }
+
+        .article-editor .form-group {
+            margin-bottom: 20px;
+        }
+
+        .article-editor input,
+        .article-editor textarea {
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .article-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            padding: 10px;
+            border: 1px solid var(--border-color, rgba(128,128,128,.2));
+            border-radius: 8px 8px 0 0;
+        }
+
+        .article-toolbar button {
+            min-width: 36px;
+            height: 34px;
+            padding: 0 10px;
+            border: 1px solid rgba(128,128,128,.25);
+            border-radius: 5px;
+            background: transparent;
+            color: inherit;
+            cursor: pointer;
+        }
+
+        .article-toolbar button:hover {
+            background: rgba(128,128,128,.15);
+        }
+
+        .article-editable {
+            min-height: 320px;
+            padding: 20px;
+            border: 1px solid var(--border-color, rgba(128,128,128,.2));
+            border-top: 0;
+            border-radius: 0 0 8px 8px;
+            outline: none;
+            line-height: 1.8;
+            overflow-wrap: anywhere;
+        }
+
+        .article-editable:empty::before {
+            content: "Начните писать статью...";
+            opacity: .35;
+        }
+
+        .article-editable img,
+        .article-editable video {
+            max-width: 100%;
+        }
+
+        .article-editor-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        .article-empty {
+            padding: 60px 20px;
+            text-align: center;
+            opacity: .55;
+            border: 1px dashed rgba(128,128,128,.3);
+            border-radius: 10px;
+        }
+
+        .article-hidden {
+            display: none !important;
+        }
+
+        .article-file-label {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 9px 14px;
+            border: 1px solid rgba(128,128,128,.3);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .article-file-label input {
+            display: none;
+        }
+
+        @media (max-width: 700px) {
+            .articles-page {
+                padding: 90px 5% 50px;
+            }
+
+            .articles-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .article-editor {
+                padding: 15px;
+            }
+
+            .article-reader-excerpt {
+                font-size: 16px;
+            }
+        }
+    </style>
 </head>
 
 <body>
@@ -26,17 +331,10 @@
     <a href="#" class="logo" id="logoLink">blind<span>.</span></a>
 
     <ul class="nav-links" id="navLinks">
-        <li>
-            <a href="#" id="ctfNavLink">CTF</a>
-        </li>
-
-        <li>
-            <a href="#" id="ctfLeaderboardNavLink">Рейтинг</a>
-        </li>
-
-        <li>
-            <a href="#" id="ctfModNavLink" hidden>Модерация</a>
-        </li>
+        <li><a href="#" id="ctfNavLink">CTF</a></li>
+        <li><a href="#" id="articlesNavLink">Статьи</a></li>
+        <li><a href="#" id="ctfLeaderboardNavLink">Рейтинг</a></li>
+        <li><a href="#" id="ctfModNavLink" hidden>Модерация</a></li>
     </ul>
 
     <div class="nav-right">
@@ -49,7 +347,6 @@
         <button class="btn-nav" id="loginBtn">Войти</button>
 
         <div class="user-menu" id="userMenu" hidden>
-
             <button class="user-btn" id="userBtn">
                 <span class="user-avatar" id="userAvatar">U</span>
                 <span class="user-name" id="userName">User</span>
@@ -59,11 +356,9 @@
                 <a href="#cabinet" id="cabinetLink">Личный кабинет</a>
                 <button id="logoutBtn">Выйти</button>
             </div>
-
         </div>
 
     </div>
-
 </nav>
 
 
@@ -71,7 +366,6 @@
 <main id="mainContent">
 
     <section class="hero blind-hero">
-
         <div class="hero-content">
 
             <div class="blind-status">
@@ -92,23 +386,15 @@
             </p>
 
             <div class="hero-actions">
-
-                <button
-                    type="button"
-                    class="btn"
-                    onclick="document.getElementById('ctfNavLink').click()"
-                >
+                <button type="button" class="btn"
+                    onclick="document.getElementById('ctfNavLink').click()">
                     Перейти к заданиям <span>→</span>
                 </button>
 
-                <button
-                    type="button"
-                    class="btn btn-outline"
-                    onclick="document.getElementById('ctfLeaderboardNavLink').click()"
-                >
+                <button type="button" class="btn btn-outline"
+                    onclick="document.getElementById('ctfLeaderboardNavLink').click()">
                     Таблица лидеров
                 </button>
-
             </div>
 
             <div class="hero-meta">
@@ -116,7 +402,6 @@
                 <span class="hero-meta-separator">/</span>
                 <span>DIGITAL INVESTIGATION</span>
             </div>
-
         </div>
 
         <div class="hero-decoration" aria-hidden="true">
@@ -129,13 +414,10 @@
                 INFORMATION IS EVERYWHERE
             </div>
         </div>
-
     </section>
 
 
-    <!-- PLATFORM DIRECTIONS -->
     <section class="platform-section">
-
         <div class="platform-heading">
             <div>
                 <p class="section-eyebrow">01 / PLATFORM</p>
@@ -148,108 +430,75 @@
             </p>
         </div>
 
-
         <div class="platform-grid">
 
             <article class="platform-card">
-
                 <div class="platform-card-top">
                     <span class="platform-number">01</span>
                     <span class="platform-symbol">⌕</span>
                 </div>
-
                 <div>
                     <span class="platform-tag">PRACTICE</span>
                     <h3>OSINT CTF</h3>
-
                     <p>
                         Практические задания, построенные на поиске,
                         анализе и сопоставлении открытых данных.
                     </p>
                 </div>
-
-                <button
-                    type="button"
-                    class="platform-link"
-                    onclick="document.getElementById('ctfNavLink').click()"
-                >
+                <button type="button" class="platform-link"
+                    onclick="document.getElementById('ctfNavLink').click()">
                     Открыть задания <span>↗</span>
                 </button>
-
             </article>
 
-
             <article class="platform-card">
-
                 <div class="platform-card-top">
                     <span class="platform-number">02</span>
                     <span class="platform-symbol">⌘</span>
                 </div>
-
                 <div>
                     <span class="platform-tag">INVESTIGATION</span>
                     <h3>Digital Research</h3>
-
                     <p>
                         Работа с цифровыми следами, поиск связей,
                         проверка гипотез и анализ информации.
                     </p>
                 </div>
-
-                <span class="platform-card-note">
-                    RESEARCH MINDSET
-                </span>
-
+                <span class="platform-card-note">RESEARCH MINDSET</span>
             </article>
 
-
             <article class="platform-card">
-
                 <div class="platform-card-top">
                     <span class="platform-number">03</span>
                     <span class="platform-symbol">↗</span>
                 </div>
-
                 <div>
                     <span class="platform-tag">COMPETITION</span>
                     <h3>Leaderboard</h3>
-
                     <p>
                         Соревнуйся с другими участниками,
                         решай задания и поднимайся в рейтинге.
                     </p>
                 </div>
-
-                <button
-                    type="button"
-                    class="platform-link"
-                    onclick="document.getElementById('ctfLeaderboardNavLink').click()"
-                >
+                <button type="button" class="platform-link"
+                    onclick="document.getElementById('ctfLeaderboardNavLink').click()">
                     Смотреть рейтинг <span>↗</span>
                 </button>
-
             </article>
 
         </div>
-
     </section>
 
-
-    <!-- BOTTOM STATEMENT -->
     <section class="blind-statement">
-
         <p class="section-eyebrow">02 / PHILOSOPHY</p>
-
         <h2>
             Information is not hidden.
             <span>It is overlooked.</span>
         </h2>
-
         <p>
             Учись замечать детали, соединять разрозненные данные
             и видеть полную картину.
         </p>
-
     </section>
 
 </main>
@@ -257,93 +506,64 @@
 
 <!-- PERSONAL CABINET -->
 <section class="cabinet" id="cabinet" hidden>
-
     <div class="cabinet-inner">
 
         <header class="cabinet-header">
             <h1>Личный кабинет</h1>
-
             <p class="cabinet-greeting">
-                Добро пожаловать,
-                <span id="cabinetName">User</span>
+                Добро пожаловать, <span id="cabinetName">User</span>
             </p>
         </header>
-
 
         <div class="cabinet-grid">
 
             <div class="cabinet-card">
                 <h3>Профиль</h3>
-
                 <div class="profile-info">
-
                     <div class="info-row">
                         <span class="info-label">Имя</span>
                         <span class="info-value" id="profileName">—</span>
                     </div>
-
                     <div class="info-row">
                         <span class="info-label">Email</span>
                         <span class="info-value" id="profileEmail">—</span>
                     </div>
-
                     <div class="info-row">
                         <span class="info-label">Роль</span>
                         <span class="info-value">
                             <span class="role-badge" id="profileRole">—</span>
                         </span>
                     </div>
-
                     <div class="info-row">
                         <span class="info-label">Дата регистрации</span>
                         <span class="info-value" id="profileDate">—</span>
                     </div>
-
                 </div>
             </div>
 
-
             <div class="cabinet-card">
                 <h3>Настройки</h3>
-
                 <form id="profileForm" class="profile-form">
-
                     <div class="form-group">
                         <label for="editName">Имя</label>
-                        <input
-                            type="text"
-                            id="editName"
-                            required
-                            minlength="2"
-                        >
+                        <input type="text" id="editName" required minlength="2">
                     </div>
-
-                    <button type="submit" class="btn btn-full">
-                        Сохранить
-                    </button>
-
+                    <button type="submit" class="btn btn-full">Сохранить</button>
                 </form>
-
                 <p class="form-message" id="profileMessage"></p>
             </div>
 
-
             <div class="cabinet-card cabinet-card-wide">
                 <h3>Активность</h3>
-
                 <ul class="activity-list" id="activityList">
                     <li>Загрузка…</li>
                 </ul>
             </div>
 
-
             <div class="cabinet-card cabinet-card-wide" id="usersPanel" hidden>
-
                 <h3>Пользователи</h3>
-
                 <div class="users-table-wrap">
                     <table class="users-table" id="usersTable">
-
                         <thead>
                             <tr>
                                 <th>Имя</th>
@@ -352,38 +572,27 @@
                                 <th></th>
                             </tr>
                         </thead>
-
                         <tbody id="usersTableBody"></tbody>
-
                     </table>
                 </div>
-
                 <p class="form-message" id="usersMessage"></p>
-
             </div>
 
         </div>
 
-        <button class="btn btn-outline" id="backToSite">
-            ← На главную
-        </button>
-
+        <button class="btn btn-outline" id="backToSite">← На главную</button>
     </div>
-
 </section>
 
 
 <!-- CTF -->
 <section class="ctf-page" id="ctfPage" hidden>
-
     <div class="ctf-container">
 
         <header class="ctf-header">
             <div>
                 <p class="hero-label">OSINT · Investigation · Intelligence</p>
-
                 <h1>CTF Challenges</h1>
-
                 <p class="ctf-description">
                     Практические задания по OSINT и цифровым расследованиям.
                     Проверяй свои навыки, исследуй информацию и находи ответы.
@@ -391,48 +600,26 @@
             </div>
         </header>
 
-
         <div class="ctf-admin-actions" id="ctfAdminActions" hidden>
-
-            <button
-                type="button"
-                class="btn"
-                id="ctfCreateToggle"
-                aria-expanded="false"
-                aria-controls="ctfCreateCard"
-            >
+            <button type="button" class="btn" id="ctfCreateToggle"
+                aria-expanded="false" aria-controls="ctfCreateCard">
                 + Создать задание
             </button>
-
         </div>
 
-
         <div class="ctf-create-card" id="ctfCreateCard" hidden>
-
             <h2>Новое CTF-задание</h2>
-
             <form id="ctfCreateForm">
-
                 <div class="form-group">
                     <label for="ctfCreateTitle">Название</label>
-                    <input
-                        type="text"
-                        id="ctfCreateTitle"
-                        required
-                        maxlength="150"
-                        placeholder="Например: Поиск цифрового следа"
-                    >
+                    <input type="text" id="ctfCreateTitle" required maxlength="150"
+                        placeholder="Например: Поиск цифрового следа">
                 </div>
 
                 <div class="form-group">
                     <label for="ctfCreateDescription">Описание задания</label>
-                    <textarea
-                        id="ctfCreateDescription"
-                        required
-                        maxlength="20000"
-                        rows="5"
-                        placeholder="Опишите условия задания..."
-                    ></textarea>
+                    <textarea id="ctfCreateDescription" required maxlength="20000"
+                        rows="5" placeholder="Опишите условия задания..."></textarea>
                 </div>
 
                 <div class="form-group">
@@ -446,98 +633,56 @@
                 </div>
 
                 <div class="form-group">
-                    <label for="ctfCreatePoints">
-                        Максимальное количество баллов
-                    </label>
-
-                    <input
-                        type="number"
-                        id="ctfCreatePoints"
-                        min="1"
-                        max="100000"
-                        value="100"
-                        required
-                    >
+                    <label for="ctfCreatePoints">Максимальное количество баллов</label>
+                    <input type="number" id="ctfCreatePoints" min="1"
+                        max="100000" value="100" required>
                 </div>
 
                 <div class="ctf-create-actions">
-
                     <button type="submit" class="btn" id="ctfCreateSubmit">
                         Опубликовать задание
                     </button>
-
-                    <button
-                        type="button"
-                        class="btn btn-outline"
-                        id="ctfCreateCancel"
-                    >
+                    <button type="button" class="btn btn-outline" id="ctfCreateCancel">
                         Отмена
                     </button>
-
                 </div>
-
                 <p class="form-message" id="ctfCreateMessage"></p>
-
             </form>
-
         </div>
 
-
         <div class="ctf-content">
-
             <div class="ctf-sidebar">
-
                 <div class="ctf-list-header">
                     <h2>Доступные задания</h2>
-
-                    <button
-                        class="btn btn-outline"
-                        id="ctfRefreshBtn"
-                        type="button"
-                    >
+                    <button class="btn btn-outline" id="ctfRefreshBtn" type="button">
                         Обновить
                     </button>
                 </div>
-
                 <div class="ctf-list" id="ctfChallengesList">
                     <p class="ctf-empty">Загрузка заданий...</p>
                 </div>
-
             </div>
 
-
             <div class="ctf-workspace" id="ctfWorkspace" hidden>
-
                 <div class="ctf-task-header">
-
                     <div>
                         <p class="ctf-task-label">Текущее задание</p>
                         <h2 id="ctfTaskTitle">Название задания</h2>
                     </div>
-
-                    <span class="ctf-status" id="ctfTaskStatus">
-                        Не начато
-                    </span>
-
+                    <span class="ctf-status" id="ctfTaskStatus">Не начато</span>
                 </div>
 
-
                 <div class="ctf-task-info">
-
                     <div class="ctf-task-description" id="ctfTaskDescription">
                         Выберите задание из списка.
                     </div>
-
                     <div class="ctf-task-meta">
                         <span id="ctfTaskDifficulty">Сложность: —</span>
                         <span id="ctfTaskPoints">Баллы: —</span>
                     </div>
-
                 </div>
 
-
                 <div class="ctf-chat-container">
-
                     <div class="ctf-chat-header">
                         <h3>Рабочее пространство</h3>
                         <p>
@@ -547,107 +692,227 @@
                     </div>
 
                     <div class="ctf-chat" id="ctfMessages">
-                        <p class="ctf-empty">
-                            Здесь появятся ваши сообщения.
-                        </p>
+                        <p class="ctf-empty">Здесь появятся ваши сообщения.</p>
                     </div>
 
-
                     <form class="ctf-message-form" id="ctfMessageForm">
-
-                        <textarea
-                            id="ctfMessageInput"
-                            rows="3"
+                        <textarea id="ctfMessageInput" rows="3"
                             placeholder="Введите сообщение или результаты расследования..."
-                            required
-                        ></textarea>
+                            required></textarea>
 
                         <div class="ctf-message-actions">
-
                             <span class="ctf-message-hint">
                                 Не отправляйте решение на проверку, пока не закончите работу.
                             </span>
-
                             <div>
-                                <button
-                                    type="submit"
-                                    class="btn btn-outline"
-                                    id="ctfSendMessageBtn"
-                                >
-                                    Отправить
-                                </button>
-
-                                <button
-                                    type="button"
-                                    class="btn"
-                                    id="ctfSubmitBtn"
-                                >
+                                <button type="submit" class="btn btn-outline"
+                                    id="ctfSendMessageBtn">Отправить</button>
+                                <button type="button" class="btn" id="ctfSubmitBtn">
                                     Отправить на проверку
                                 </button>
                             </div>
-
                         </div>
-
                     </form>
-
                 </div>
 
-
                 <div class="ctf-feedback" id="ctfFeedback" hidden>
-
                     <h3>Результат проверки</h3>
-
                     <div class="ctf-feedback-score">
                         <span>Полученные баллы:</span>
                         <strong id="ctfFeedbackScore">0</strong>
                     </div>
-
                     <p id="ctfFeedbackText"></p>
-
                 </div>
-
             </div>
-
         </div>
-
 
         <button class="btn btn-outline" id="ctfBackBtn" type="button">
             ← На главную
         </button>
+    </div>
+</section>
+
+
+<!-- ARTICLES -->
+<section class="articles-page" id="articlesPage" hidden>
+    <div class="articles-container">
+
+        <div id="articlesListView">
+            <header class="articles-header">
+                <div>
+                    <p class="section-eyebrow">03 / KNOWLEDGE</p>
+                    <h1>Статьи</h1>
+                    <p>
+                        Исследования, аналитика, методы OSINT и материалы
+                        сообщества blind.
+                    </p>
+                </div>
+            </header>
+
+            <div class="article-admin-bar" id="articleAdminBar" hidden>
+                <button class="btn" type="button" id="articleCreateBtn">
+                    + Новая статья
+                </button>
+            </div>
+
+            <div class="articles-grid" id="articlesGrid">
+                <div class="article-empty">Загрузка статей...</div>
+            </div>
+        </div>
+
+
+        <!-- ARTICLE READER -->
+        <div class="article-reader article-hidden" id="articleReader">
+
+            <button class="btn btn-outline article-reader-back"
+                type="button" id="articleReaderBack">
+                ← Все статьи
+            </button>
+
+            <div id="articleReaderAdminActions" class="article-admin-bar" hidden>
+                <button class="btn btn-outline" type="button" id="articleEditBtn">
+                    Редактировать
+                </button>
+                <button class="btn btn-outline" type="button" id="articleDeleteBtn">
+                    Удалить
+                </button>
+            </div>
+
+            <img id="articleReaderPreview" class="article-reader-preview"
+                alt="Превью статьи" hidden>
+
+            <p class="section-eyebrow">BLIND / ARTICLE</p>
+            <h1 id="articleReaderTitle"></h1>
+            <p class="article-reader-excerpt" id="articleReaderExcerpt"></p>
+            <div class="article-reader-meta" id="articleReaderMeta"></div>
+            <div class="article-content" id="articleReaderContent"></div>
+        </div>
+
+
+        <!-- ARTICLE EDITOR -->
+        <div class="article-editor article-hidden" id="articleEditor">
+
+            <button class="btn btn-outline article-reader-back"
+                type="button" id="articleEditorBack">
+                ← Назад
+            </button>
+
+            <h2 id="articleEditorHeading">Новая статья</h2>
+
+            <form id="articleEditorForm" enctype="multipart/form-data">
+
+                <div class="form-group">
+                    <label for="articleTitleInput">Заголовок</label>
+                    <input type="text" id="articleTitleInput"
+                        maxlength="200" required
+                        placeholder="Название статьи">
+                </div>
+
+                <div class="form-group">
+                    <label for="articleExcerptInput">Краткое описание</label>
+                    <textarea id="articleExcerptInput" maxlength="500"
+                        rows="3" required
+                        placeholder="Краткое описание для карточки статьи"></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="articleAuthorInput">Авторство</label>
+                    <input type="text" id="articleAuthorInput"
+                        maxlength="120" required
+                        placeholder="Имя автора">
+                </div>
+
+                <div class="form-group">
+                    <label for="articlePreviewInput">Превью статьи</label>
+                    <input type="file" id="articlePreviewInput"
+                        accept="image/png,image/jpeg,image/webp,image/gif">
+                    <div id="articlePreviewStatus"></div>
+                    <img id="articlePreviewLocal" alt="Предпросмотр"
+                        style="display:none;max-width:100%;max-height:220px;margin-top:12px;border-radius:8px;">
+                </div>
+
+                <div class="form-group">
+                    <label>Содержание статьи</label>
+
+                    <div class="article-toolbar">
+                        <button type="button" data-command="bold" title="Жирный"><b>B</b></button>
+                        <button type="button" data-command="italic" title="Курсив"><i>I</i></button>
+                        <button type="button" data-command="underline" title="Подчёркнутый"><u>U</u></button>
+                        <button type="button" data-command="formatBlock" data-value="pre" title="Моноширинный">Mono</button>
+                        <button type="button" data-command="fontSize" data-value="2" title="Уменьшить текст">A−</button>
+                        <button type="button" data-command="fontSize" data-value="5" title="Увеличить текст">A+</button>
+                        <button type="button" data-command="insertOrderedList" title="Нумерованный список">1.</button>
+                        <button type="button" data-command="insertUnorderedList" title="Маркированный список">•</button>
+                        <button type="button" data-command="formatBlock" data-value="h2">H2</button>
+                        <button type="button" data-command="formatBlock" data-value="h3">H3</button>
+                        <button type="button" data-command="formatBlock" data-value="blockquote">Цитата</button>
+
+                        <label class="article-file-label">
+                            Изображение
+                            <input type="file" id="articleImageInput" accept="image/*">
+                        </label>
+
+                        <label class="article-file-label">
+                            Видео
+                            <input type="file" id="articleVideoInput" accept="video/mp4,video/webm">
+                        </label>
+
+                        <label class="article-file-label">
+                            Аудио
+                            <input type="file" id="articleAudioInput" accept="audio/*">
+                        </label>
+                    </div>
+
+                    <div class="article-editable" id="articleContentEditor"
+                        contenteditable="true" spellcheck="true"></div>
+                </div>
+
+                <div class="article-editor-actions">
+                    <button type="submit" class="btn" id="articleSaveBtn">
+                        Опубликовать статью
+                    </button>
+
+                    <button type="button" class="btn btn-outline"
+                        id="articleCancelBtn">
+                        Отмена
+                    </button>
+                </div>
+
+                <p class="form-message" id="articleEditorMessage"></p>
+            </form>
+        </div>
+
+        <button class="btn btn-outline" id="articlesBackBtn" type="button">
+            ← На главную
+        </button>
 
     </div>
-
 </section>
 
 
 <!-- CTF MODERATION -->
 <section class="ctf-page ctf-mod-page" id="ctfModPage" hidden>
-
     <div class="ctf-container">
 
         <header class="ctf-header">
             <div>
                 <p class="hero-label">Administration · Review</p>
                 <h1>Модерация CTF</h1>
-
                 <p class="ctf-description">
                     Проверка решений участников, обратная связь и начисление баллов.
                 </p>
             </div>
         </header>
 
-
         <div class="ctf-mod-layout">
 
             <div class="ctf-mod-sidebar">
-
                 <div class="ctf-list-header">
                     <h2>Работы участников</h2>
                 </div>
 
                 <div class="form-group">
                     <label for="ctfModStatusFilter">Фильтр по статусу</label>
-
                     <select id="ctfModStatusFilter">
                         <option value="">Все работы</option>
                         <option value="in_progress">В процессе</option>
@@ -659,155 +924,98 @@
                 <div class="ctf-list" id="ctfModSubmissions">
                     <p class="ctf-empty">Загрузка работ...</p>
                 </div>
-
             </div>
-
 
             <div class="ctf-mod-workspace" id="ctfModWorkspace" hidden>
 
                 <div class="ctf-task-header">
-
                     <div>
                         <p class="ctf-task-label">Проверка решения</p>
                         <h2 id="ctfModSubmissionTitle">Выберите работу</h2>
                     </div>
-
                     <span class="ctf-status" id="ctfModSubmissionStatus">—</span>
-
                 </div>
 
-
                 <div class="ctf-mod-info">
-
                     <div class="info-row">
                         <span class="info-label">Участник</span>
                         <span class="info-value" id="ctfModUsername">—</span>
                     </div>
-
                     <div class="info-row">
                         <span class="info-label">Задание</span>
                         <span class="info-value" id="ctfModChallengeTitle">—</span>
                     </div>
-
                     <div class="info-row">
                         <span class="info-label">Дата отправки</span>
                         <span class="info-value" id="ctfModSubmissionDate">—</span>
                     </div>
-
                 </div>
 
-
                 <div class="ctf-chat-container">
-
                     <div class="ctf-chat-header">
                         <h3>Переписка</h3>
                         <p>История сообщений участника и модератора.</p>
                     </div>
 
                     <div class="ctf-chat" id="ctfModMessages">
-                        <div class="ctf-empty">
-                            Выберите работу для просмотра.
-                        </div>
+                        <div class="ctf-empty">Выберите работу для просмотра.</div>
                     </div>
 
-
                     <form class="ctf-message-form" id="ctfModMessageForm">
-
-                        <textarea
-                            id="ctfModMessageInput"
-                            rows="3"
-                            placeholder="Написать участнику..."
-                            required
-                        ></textarea>
-
-                        <button type="submit" class="btn">
-                            Отправить сообщение
-                        </button>
-
+                        <textarea id="ctfModMessageInput" rows="3"
+                            placeholder="Написать участнику..." required></textarea>
+                        <button type="submit" class="btn">Отправить сообщение</button>
                     </form>
-
                 </div>
 
-
                 <div class="ctf-grade-card">
-
                     <h3>Оценивание работы</h3>
-
                     <form id="ctfGradeForm">
-
                         <div class="form-group">
                             <label for="ctfGradeScore">Начисленные баллы</label>
-
-                            <input
-                                type="number"
-                                id="ctfGradeScore"
-                                min="0"
-                                value="0"
-                                required
-                            >
+                            <input type="number" id="ctfGradeScore"
+                                min="0" value="0" required>
                         </div>
 
                         <div class="form-group">
                             <label for="ctfGradeFeedback">Комментарий модератора</label>
-
-                            <textarea
-                                id="ctfGradeFeedback"
-                                rows="4"
-                                placeholder="Объясните результат проверки..."
-                            ></textarea>
+                            <textarea id="ctfGradeFeedback" rows="4"
+                                placeholder="Объясните результат проверки..."></textarea>
                         </div>
 
-                        <button type="submit" class="btn">
-                            Сохранить результат
-                        </button>
-
+                        <button type="submit" class="btn">Сохранить результат</button>
                         <p class="form-message" id="ctfGradeMessage"></p>
-
                     </form>
-
                 </div>
-
             </div>
-
         </div>
-
 
         <button class="btn btn-outline" id="ctfModBackBtn" type="button">
             ← На главную
         </button>
-
     </div>
-
 </section>
 
 
 <!-- LEADERBOARD -->
 <section class="ctf-page ctf-leaderboard-page" id="ctfLeaderboardPage" hidden>
-
     <div class="ctf-container">
 
         <header class="ctf-header">
             <div>
                 <p class="hero-label">OSINT · Competition · Ranking</p>
                 <h1>Таблица лидеров</h1>
-
                 <p class="ctf-description">
                     Участники с наибольшим количеством баллов за проверенные CTF-задания.
                 </p>
             </div>
         </header>
 
-
         <div class="ctf-leaderboard-panel">
-
             <div class="ctf-list-header">
                 <h2>Рейтинг участников</h2>
-
-                <button
-                    class="btn btn-outline"
-                    id="ctfLeaderboardRefreshBtn"
-                    type="button"
-                >
+                <button class="btn btn-outline"
+                    id="ctfLeaderboardRefreshBtn" type="button">
                     Обновить
                 </button>
             </div>
@@ -815,20 +1023,12 @@
             <div id="ctfLeaderboardContent">
                 <p class="ctf-empty">Загрузка рейтинга...</p>
             </div>
-
         </div>
 
-
-        <button
-            class="btn btn-outline"
-            id="ctfLeaderboardBackBtn"
-            type="button"
-        >
+        <button class="btn btn-outline" id="ctfLeaderboardBackBtn" type="button">
             ← На главную
         </button>
-
     </div>
-
 </section>
 
 
@@ -840,145 +1040,548 @@
 
 <!-- AUTH MODAL -->
 <div class="modal-overlay" id="authModal" hidden>
-
     <div class="modal">
 
-        <button
-            class="modal-close"
-            id="modalClose"
-            aria-label="Закрыть"
-        >
-            ×
-        </button>
+        <button class="modal-close" id="modalClose" aria-label="Закрыть">×</button>
 
-
-        <!-- LOGIN -->
         <div class="auth-form" id="loginForm">
-
             <h2>Вход</h2>
             <p class="auth-sub">Войдите в свой аккаунт blind</p>
 
             <form id="loginFormEl">
-
                 <div class="form-group">
                     <label for="loginEmail">Email</label>
-
-                    <input
-                        type="email"
-                        id="loginEmail"
-                        required
-                        placeholder="you@example.com"
-                    >
+                    <input type="email" id="loginEmail" required placeholder="you@example.com">
                 </div>
 
                 <div class="form-group">
                     <label for="loginPassword">Пароль</label>
-
-                    <input
-                        type="password"
-                        id="loginPassword"
-                        required
-                        minlength="6"
-                        placeholder="••••••••"
-                    >
+                    <input type="password" id="loginPassword" required
+                        minlength="6" placeholder="••••••••">
                 </div>
 
                 <p class="form-error" id="loginError"></p>
-
-                <button type="submit" class="btn btn-full">
-                    Войти
-                </button>
-
+                <button type="submit" class="btn btn-full">Войти</button>
             </form>
 
             <p class="auth-switch">
                 Нет аккаунта?
-                <button type="button" id="showRegister">
-                    Зарегистрироваться
-                </button>
+                <button type="button" id="showRegister">Зарегистрироваться</button>
             </p>
-
         </div>
 
-
-        <!-- REGISTER -->
         <div class="auth-form" id="registerForm" hidden>
-
             <h2>Регистрация</h2>
             <p class="auth-sub">Создайте аккаунт blind</p>
 
             <form id="registerFormEl">
-
                 <div class="form-group">
                     <label for="regName">Имя</label>
-
-                    <input
-                        type="text"
-                        id="regName"
-                        required
-                        minlength="2"
-                        placeholder="Как вас зовут"
-                    >
+                    <input type="text" id="regName" required minlength="2"
+                        placeholder="Как вас зовут">
                 </div>
 
                 <div class="form-group">
                     <label for="regEmail">Email</label>
-
-                    <input
-                        type="email"
-                        id="regEmail"
-                        required
-                        placeholder="you@example.com"
-                    >
+                    <input type="email" id="regEmail" required
+                        placeholder="you@example.com">
                 </div>
 
                 <div class="form-group">
                     <label for="regPassword">Пароль</label>
-
-                    <input
-                        type="password"
-                        id="regPassword"
-                        required
-                        minlength="6"
-                        placeholder="Минимум 6 символов"
-                    >
+                    <input type="password" id="regPassword" required
+                        minlength="6" placeholder="Минимум 6 символов">
                 </div>
 
                 <div class="form-group">
                     <label for="regPassword2">Повторите пароль</label>
-
-                    <input
-                        type="password"
-                        id="regPassword2"
-                        required
-                        minlength="6"
-                        placeholder="••••••••"
-                    >
+                    <input type="password" id="regPassword2" required
+                        minlength="6" placeholder="••••••••">
                 </div>
 
                 <p class="form-error" id="registerError"></p>
-
-                <button type="submit" class="btn btn-full">
-                    Создать аккаунт
-                </button>
-
+                <button type="submit" class="btn btn-full">Создать аккаунт</button>
             </form>
 
             <p class="auth-switch">
                 Уже есть аккаунт?
-                <button type="button" id="showLogin">
-                    Войти
-                </button>
+                <button type="button" id="showLogin">Войти</button>
             </p>
-
         </div>
-
     </div>
-
 </div>
 
 
 <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+<script>
+/* ============================================================
+   ARTICLES FRONTEND
+   ============================================================ */
+
+(() => {
+    const $ = id => document.getElementById(id);
+
+    const nav = $("articlesNavLink");
+    const page = $("articlesPage");
+    const main = $("mainContent");
+    const cabinet = $("cabinet");
+    const ctf = $("ctfPage");
+    const mod = $("ctfModPage");
+    const leaderboard = $("ctfLeaderboardPage");
+    const footer = $("siteFooter");
+
+    let currentUser = null;
+    let currentArticle = null;
+    let editingArticleId = null;
+    let uploadedPreview = null;
+
+    function showArticles() {
+        main.hidden = true;
+        cabinet.hidden = true;
+        ctf.hidden = true;
+        mod.hidden = true;
+        leaderboard.hidden = true;
+        page.hidden = false;
+        footer.hidden = true;
+
+        $("articlesListView").classList.remove("article-hidden");
+        $("articleReader").classList.add("article-hidden");
+        $("articleEditor").classList.add("article-hidden");
+
+        loadArticles();
+        window.scrollTo(0, 0);
+    }
+
+    function showMainPage() {
+        page.hidden = true;
+        footer.hidden = false;
+        main.hidden = false;
+        window.scrollTo(0, 0);
+    }
+
+    async function getCurrentUser() {
+        try {
+            const response = await fetch("/api/me");
+            const data = await response.json();
+            currentUser = data.user;
+            updateArticlePermissions();
+        } catch (error) {
+            currentUser = null;
+        }
+    }
+
+    function canEdit() {
+        return currentUser &&
+            ["admin", "moderator"].includes(currentUser.role);
+    }
+
+    function updateArticlePermissions() {
+        $("articleAdminBar").hidden = !canEdit();
+    }
+
+    function escapeHTML(value) {
+        return String(value ?? "").replace(/[&<>"']/g, char => ({
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            '"': "&quot;",
+            "'": "&#039;"
+        })[char]);
+    }
+
+    function formatDate(value) {
+        if (!value) return "";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toLocaleDateString("ru-RU");
+    }
+
+    async function loadArticles() {
+        const grid = $("articlesGrid");
+        grid.innerHTML = '<div class="article-empty">Загрузка статей...</div>';
+
+        try {
+            const response = await fetch("/api/articles");
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Не удалось загрузить статьи");
+            }
+
+            const articles = data.articles || [];
+
+            if (!articles.length) {
+                grid.innerHTML = '<div class="article-empty">Пока нет опубликованных статей.</div>';
+                return;
+            }
+
+            grid.innerHTML = articles.map(article => `
+                <article class="article-card" data-id="${Number(article.id)}">
+                    ${
+                        article.preview
+                        ? `<img class="article-card-image"
+                            src="${escapeHTML(article.preview)}"
+                            alt="Превью статьи" loading="lazy">`
+                        : `<div class="article-card-placeholder">⌕</div>`
+                    }
+                    <div class="article-card-body">
+                        <div class="article-card-meta">
+                            <span>${escapeHTML(article.author)}</span>
+                            <span>${formatDate(article.created_at)}</span>
+                        </div>
+                        <h3>${escapeHTML(article.title)}</h3>
+                        <p>${escapeHTML(article.excerpt)}</p>
+                    </div>
+                </article>
+            `).join("");
+
+            grid.querySelectorAll(".article-card").forEach(card => {
+                card.addEventListener("click", () => {
+                    openArticle(Number(card.dataset.id));
+                });
+            });
+
+        } catch (error) {
+            grid.innerHTML = `
+                <div class="article-empty">
+                    ${escapeHTML(error.message)}
+                </div>`;
+        }
+    }
+
+    async function openArticle(id) {
+        try {
+            const response = await fetch(`/api/articles/${id}`);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Статья не найдена");
+            }
+
+            currentArticle = data.article;
+
+            $("articlesListView").classList.add("article-hidden");
+            $("articleEditor").classList.add("article-hidden");
+            $("articleReader").classList.remove("article-hidden");
+
+            $("articleReaderTitle").textContent = currentArticle.title;
+            $("articleReaderExcerpt").textContent = currentArticle.excerpt;
+
+            $("articleReaderMeta").textContent =
+                `Автор: ${currentArticle.author} · ${formatDate(currentArticle.created_at)}`;
+
+            $("articleReaderContent").innerHTML = currentArticle.content;
+
+            const preview = $("articleReaderPreview");
+
+            if (currentArticle.preview) {
+                preview.src = currentArticle.preview;
+                preview.hidden = false;
+            } else {
+                preview.hidden = true;
+            }
+
+            $("articleReaderAdminActions").hidden = !canEdit();
+
+            window.scrollTo(0, 0);
+
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    function openEditor(article = null) {
+        if (!canEdit()) {
+            alert("Недостаточно прав.");
+            return;
+        }
+
+        editingArticleId = article ? article.id : null;
+        uploadedPreview = article ? article.preview : null;
+
+        $("articlesListView").classList.add("article-hidden");
+        $("articleReader").classList.add("article-hidden");
+        $("articleEditor").classList.remove("article-hidden");
+
+        $("articleEditorHeading").textContent =
+            article ? "Редактирование статьи" : "Новая статья";
+
+        $("articleTitleInput").value = article?.title || "";
+        $("articleExcerptInput").value = article?.excerpt || "";
+        $("articleAuthorInput").value =
+            article?.author || currentUser?.name || "";
+
+        $("articleContentEditor").innerHTML = article?.content || "";
+        $("articleEditorMessage").textContent = "";
+
+        $("articlePreviewInput").value = "";
+
+        const preview = $("articlePreviewLocal");
+
+        if (article?.preview) {
+            preview.src = article.preview;
+            preview.style.display = "block";
+            $("articlePreviewStatus").textContent = "Текущее превью сохранено";
+        } else {
+            preview.style.display = "none";
+            $("articlePreviewStatus").textContent = "";
+        }
+
+        $("articleSaveBtn").textContent =
+            article ? "Сохранить изменения" : "Опубликовать статью";
+
+        window.scrollTo(0, 0);
+    }
+
+    function closeEditor() {
+        $("articleEditor").classList.add("article-hidden");
+
+        if (currentArticle) {
+            $("articleReader").classList.remove("article-hidden");
+        } else {
+            $("articlesListView").classList.remove("article-hidden");
+        }
+    }
+
+    async function uploadMedia(file) {
+        if (!file) return null;
+
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const response = await fetch("/api/articles/upload-media", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || "Ошибка загрузки файла");
+        }
+
+        return data;
+    }
+
+    async function insertMedia(file, type) {
+        if (!file) return;
+
+        try {
+            $("articleEditorMessage").textContent = "Загрузка файла...";
+
+            const data = await uploadMedia(file);
+            const editor = $("articleContentEditor");
+
+            editor.focus();
+
+            let html = "";
+
+            if (type === "image") {
+                html = `<p><img src="${escapeHTML(data.url)}" alt=""></p>`;
+            } else if (type === "video") {
+                html = `<p><video controls preload="metadata" src="${escapeHTML(data.url)}"></video></p>`;
+            } else {
+                html = `<p><audio controls src="${escapeHTML(data.url)}"></audio></p>`;
+            }
+
+            document.execCommand("insertHTML", false, html);
+            $("articleEditorMessage").textContent = "Файл добавлен";
+
+        } catch (error) {
+            $("articleEditorMessage").textContent = error.message;
+        }
+    }
+
+    async function saveArticle(event) {
+        event.preventDefault();
+
+        if (!canEdit()) {
+            alert("Недостаточно прав.");
+            return;
+        }
+
+        const title = $("articleTitleInput").value.trim();
+        const excerpt = $("articleExcerptInput").value.trim();
+        const author = $("articleAuthorInput").value.trim();
+        const content = $("articleContentEditor").innerHTML;
+
+        if (!title || !excerpt || !author ||
+            !$("articleContentEditor").innerText.trim()) {
+            $("articleEditorMessage").textContent =
+                "Заполните все обязательные поля.";
+            return;
+        }
+
+        const formData = new FormData();
+
+        formData.append("title", title);
+        formData.append("excerpt", excerpt);
+        formData.append("author", author);
+        formData.append("content", content);
+
+        const previewFile = $("articlePreviewInput").files[0];
+
+        if (previewFile) {
+            formData.append("preview", previewFile);
+        }
+
+        const saveButton = $("articleSaveBtn");
+        saveButton.disabled = true;
+        $("articleEditorMessage").textContent = "Сохранение...";
+
+        try {
+            const url = editingArticleId
+                ? `/api/articles/${editingArticleId}`
+                : "/api/articles";
+
+            const response = await fetch(url, {
+                method: editingArticleId ? "PUT" : "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Не удалось сохранить статью");
+            }
+
+            $("articleEditorMessage").textContent = "Статья сохранена.";
+
+            currentArticle = data.article;
+            editingArticleId = null;
+
+            await getCurrentUser();
+            await loadArticles();
+
+            openArticle(data.article.id);
+
+        } catch (error) {
+            $("articleEditorMessage").textContent = error.message;
+        } finally {
+            saveButton.disabled = false;
+        }
+    }
+
+    async function deleteArticle() {
+        if (!currentArticle || !canEdit()) return;
+
+        const confirmed = confirm(
+            `Удалить статью «${currentArticle.title}»?`
+        );
+
+        if (!confirmed) return;
+
+        try {
+            const response = await fetch(
+                `/api/articles/${currentArticle.id}`,
+                { method: "DELETE" }
+            );
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Ошибка удаления");
+            }
+
+            currentArticle = null;
+            showArticles();
+
+        } catch (error) {
+            alert(error.message);
+        }
+    }
+
+    /* NAVIGATION */
+
+    nav.addEventListener("click", event => {
+        event.preventDefault();
+        showArticles();
+    });
+
+    $("articlesBackBtn").addEventListener("click", showMainPage);
+
+    $("articleReaderBack").addEventListener("click", () => {
+        currentArticle = null;
+        showArticles();
+    });
+
+    $("articleEditorBack").addEventListener("click", closeEditor);
+    $("articleCancelBtn").addEventListener("click", closeEditor);
+
+    $("articleCreateBtn").addEventListener("click", () => {
+        currentArticle = null;
+        openEditor();
+    });
+
+    $("articleEditBtn").addEventListener("click", () => {
+        if (currentArticle) openEditor(currentArticle);
+    });
+
+    $("articleDeleteBtn").addEventListener("click", deleteArticle);
+
+    $("articleEditorForm").addEventListener("submit", saveArticle);
+
+
+    /* EDITOR TOOLBAR */
+
+    document.querySelectorAll(".article-toolbar button").forEach(button => {
+        button.addEventListener("click", () => {
+            const command = button.dataset.command;
+            const value = button.dataset.value || null;
+
+            $("articleContentEditor").focus();
+
+            if (command === "formatBlock") {
+                document.execCommand(command, false, value);
+            } else if (command === "fontSize") {
+                document.execCommand(command, false, value);
+            } else {
+                document.execCommand(command, false, null);
+            }
+        });
+    });
+
+
+    /* PREVIEW UPLOAD */
+
+    $("articlePreviewInput").addEventListener("change", event => {
+        const file = event.target.files[0];
+
+        if (!file) return;
+
+        const preview = $("articlePreviewLocal");
+        preview.src = URL.createObjectURL(file);
+        preview.style.display = "block";
+
+        $("articlePreviewStatus").textContent = file.name;
+    });
+
+
+    /* MEDIA UPLOADS */
+
+    $("articleImageInput").addEventListener("change", event => {
+        insertMedia(event.target.files[0], "image");
+        event.target.value = "";
+    });
+
+    $("articleVideoInput").addEventListener("change", event => {
+        insertMedia(event.target.files[0], "video");
+        event.target.value = "";
+    });
+
+    $("articleAudioInput").addEventListener("change", event => {
+        insertMedia(event.target.files[0], "audio");
+        event.target.value = "";
+    });
+
+
+    /* INIT */
+
+    getCurrentUser();
+
+})();
+</script>
 
 </body>
 </html>
