@@ -286,10 +286,26 @@
       </header>
 
 
+      <!-- Управление CTF: только для администратора -->
+      <div class="ctf-admin-actions" id="ctfAdminActions" hidden>
+
+        <button
+          type="button"
+          class="btn"
+          id="ctfCreateToggle"
+          aria-expanded="false"
+          aria-controls="ctfCreateCard"
+        >
+          + Создать задание
+        </button>
+
+      </div>
+
+
       <!-- Создание задания -->
       <div class="ctf-create-card" id="ctfCreateCard" hidden>
 
-        <h2>Создать задание</h2>
+        <h2>Новое CTF-задание</h2>
 
         <form id="ctfCreateForm">
 
@@ -309,6 +325,7 @@
             <textarea
               id="ctfCreateDescription"
               required
+              maxlength="20000"
               rows="5"
               placeholder="Опишите условия задания..."
             ></textarea>
@@ -316,63 +333,45 @@
 
           <div class="form-group">
             <label for="ctfCreateDifficulty">Сложность</label>
-            <select id="ctfCreateDifficulty">
-              <option value="easy">Лёгкая</option>
-              <option value="medium" selected>Средняя</option>
-              <option value="hard">Сложная</option>
-              <option value="expert">Экспертная</option>
+            <select id="ctfCreateDifficulty" required>
+              <option value="Лёгкая">Лёгкая</option>
+              <option value="Средняя" selected>Средняя</option>
+              <option value="Сложная">Сложная</option>
+              <option value="Экспертная">Экспертная</option>
             </select>
           </div>
 
           <div class="form-group">
-            <label for="ctfCreatePoints">Максимальное количество баллов</label>
+            <label for="ctfCreatePoints">
+              Максимальное количество баллов
+            </label>
             <input
               type="number"
               id="ctfCreatePoints"
               min="1"
-              max="10000"
+              max="100000"
               value="100"
               required
             >
           </div>
 
-          <button type="submit" class="btn">
-            Опубликовать задание
-          </button>
+          <div class="ctf-create-actions">
+            <button type="submit" class="btn" id="ctfCreateSubmit">
+              Опубликовать задание
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-outline"
+              id="ctfCreateCancel"
+            >
+              Отмена
+            </button>
+          </div>
 
           <p class="form-message" id="ctfCreateMessage"></p>
 
         </form>
-
-      </div>
-
-
-      <!-- Список лидеров -->
-      <div class="ctf-leaderboard-section">
-
-        <button
-          type="button"
-          id="ctfLeaderboardToggle"
-          class="btn btn-secondary"
-          aria-expanded="false"
-          aria-controls="ctfLeaderboardPanel"
-        >
-          <span>🏆</span>
-          Список лидеров
-        </button>
-
-        <div id="ctfLeaderboardPanel" hidden>
-
-          <div class="ctf-leaderboard-header">
-            <h2>Таблица лидеров</h2>
-            <p>Участники с наибольшим количеством баллов</p>
-          </div>
-
-          <div id="ctfLeaderboardContent">
-            <p class="ctf-empty">Нажмите кнопку, чтобы загрузить рейтинг.</p>
-          </div>
-
-        </div>
 
       </div>
 
