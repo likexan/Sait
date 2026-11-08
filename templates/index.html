@@ -494,22 +494,24 @@
                 </button>
             </article>
 
-            <article class="platform-card">
-                <div class="platform-card-top">
-                    <span class="platform-number">02</span>
-                    <span class="platform-symbol">⌘</span>
-                </div>
-                <div>
-                    <span class="platform-tag">INVESTIGATION</span>
-                    <h3>Digital Research</h3>
-                    <p>
-                        Работа с цифровыми следами, поиск связей,
-                        проверка гипотез и анализ информации.
-                    </p>
-                </div>
-                <span class="platform-card-note">RESEARCH MINDSET</span>
-            </article>
-
+<article class="platform-card">
+    <div class="platform-card-top">
+        <span class="platform-number">02</span>
+        <span class="platform-symbol">⌘</span>
+    </div>
+    <div>
+        <span class="platform-tag">KNOWLEDGE</span>
+        <h3>Статьи</h3>
+        <p>
+            Полезные материалы, инструкции и исследования
+            в области OSINT и цифровой безопасности.
+        </p>
+    </div>
+    <button type="button" class="platform-link"
+        onclick="document.getElementById('articlesNavLink').click()">
+        Читать статьи <span>↗</span>
+    </button>
+</article>
             <article class="platform-card">
                 <div class="platform-card-top">
                     <span class="platform-number">03</span>
@@ -1095,7 +1097,53 @@
             </div>
         </header>
 
-        <div class="ctf-mod-layout">
+<div class="moderation-tabs">
+    <button type="button" class="btn" data-mod-tab="ctf">
+        CTF
+    </button>
+
+    <button type="button" class="btn btn-outline" data-mod-tab="users">
+        Управление пользователями
+    </button>
+
+    <button type="button" class="btn btn-outline" data-mod-tab="audit">
+        Аудит
+    </button>
+</div>
+
+<section id="modTabCTF">
+    <div class="cabinet-card cabinet-card-wide">
+    <div class="ctf-list-header">
+        <h2>Управление заданиями</h2>
+
+        <button type="button" class="btn btn-outline" id="modCTFRefreshBtn">
+            Обновить
+        </button>
+    </div>
+
+    <div class="users-table-wrap">
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Название</th>
+                    <th>Сложность</th>
+                    <th>Баллы</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+
+            <tbody id="modCTFTableBody">
+                <tr>
+                    <td colspan="5">Загрузка заданий...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p class="form-message" id="modCTFMessage"></p>
+</div>
+    <div class="ctf-mod-layout">
 
             <div class="ctf-mod-sidebar">
                 <div class="ctf-list-header">
@@ -1180,6 +1228,84 @@
                 </div>
             </div>
         </div>
+
+        </div>
+</section>
+
+<!-- USER MANAGEMENT -->
+<section id="modTabUsers" hidden>
+    <div class="cabinet-card cabinet-card-wide">
+        <h2>Управление пользователями</h2>
+
+        <input
+            type="search"
+            id="modUserSearch"
+            placeholder="Поиск по имени или email..."
+        >
+
+        <div class="users-table-wrap">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Имя</th>
+                        <th>Email</th>
+                        <th>Роль</th>
+                    </tr>
+                </thead>
+                <tbody id="modUsersTableBody">
+                    <tr>
+                        <td colspan="4">Загрузка...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p class="form-message" id="modUsersMessage"></p>
+    </div>
+</section>
+
+<!-- AUDIT -->
+<section id="modTabAudit" hidden>
+    <div class="cabinet-card cabinet-card-wide">
+        <h2>Журнал действий</h2>
+
+        <div class="form-group">
+            <label for="auditUserFilter">ID пользователя (необязательно)</label>
+            <input
+                type="number"
+                id="auditUserFilter"
+                min="1"
+                placeholder="Например, 12"
+            >
+        </div>
+
+        <button type="button" class="btn" id="auditRefreshBtn">
+            Применить фильтр
+        </button>
+
+        <div class="users-table-wrap">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Пользователь</th>
+                        <th>Действие</th>
+                        <th>Описание</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTableBody">
+                    <tr>
+                        <td colspan="5">Загрузка...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p class="form-message" id="auditMessage"></p>
+    </div>
+</section>
 
         <button class="btn btn-outline" id="ctfModBackBtn" type="button">
             ← На главную

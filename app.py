@@ -150,6 +150,46 @@ class Activity(db.Model):
             "date": self.created_at.isoformat() + "Z",
         }
 
+# ============================================================
+# AUDIT LOG MODEL
+# ============================================================
+
+class AuditLog(db.Model):
+    __tablename__ = "audit_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    actor_id = db.Column(
+        db.Integer,
+        db.ForeignKey("users.id"),
+        nullable=True,
+        index=True
+    )
+
+    actor_name = db.Column(db.String(100), nullable=False)
+    actor_email = db.Column(db.String(120), nullable=True)
+
+    action = db.Column(db.String(100), nullable=False)
+    details = db.Column(db.String(1000), nullable=False, default="")
+
+    ip_address = db.Column(db.String(64), nullable=True)
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        index=True
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "actor_id": self.actor_id,
+            "actor_name": self.actor_name,
+            "actor_email": self.actor_email,
+            "action": self.action,
+            "details": self.details,
+            "ip_address": self.ip_address,
+            "created_at": self.created_at.isoformat() + "Z"
+        }
 
 # ============================================================
 # CTF MODELS
@@ -554,6 +594,50 @@ def add_activity(user, text):
     db.session.add(activity)
     db.session.commit()
 
+# ============================================================
+# AUDIT LOGGER
+# ============================================================
+
+@app.after_request
+def write_audit_log(response):
+
+    if (
+        request.path.startswith("/api/")
+        and request.method in ("POST", "PUT", "PATCH", "DELETE")
+        and response.status_code < 400
+    ):
+        try:
+            user_id = session.get("user_id")
+            user = db.session.get(User, user_id) if user_id else None
+
+            action_names = {
+                "POST": "Создание / действие",
+                "PUT": "Изменение",
+                "PATCH": "Изменение",
+                "DELETE": "Удаление"
+            }
+
+            entry = AuditLog(
+                actor_id=user.id if user else None,
+                actor_name=user.name if user else "Гость",
+                actor_email=user.email if user else None,
+                action=action_names.get(
+                    request.method,
+                    request.method
+                ),
+                details=(
+                    f"{request.method} {request.path}"
+                ),
+                ip_address=request.remote_addr
+            )
+
+            db.session.add(entry)
+            db.session.commit()
+
+        except Exception:
+            db.session.rollback()
+
+    return response
 
 # ============================================================
 # CTF HELPERS
@@ -1018,6 +1102,55 @@ def set_user_role(user_id):
         "user": target.to_dict()
     })
 
+# ============================================================
+# MODERATION: AUDIT LOG
+# ============================================================
+
+@app.route("/api/mod/audit", methods=["GET"])
+@role_required("admin", "moderator")
+def get_audit_log():
+
+    query = AuditLog.query
+
+    user_id = request.args.get("user_id", "").strip()
+
+    if user_id:
+        try:
+            query = query.filter(
+                AuditLog.actor_id == int(user_id)
+            )
+        except ValueError:
+            return jsonify({
+                "success": False,
+                "error": "Некорректный ID пользователя"
+            }), 400
+
+    action = request.args.get("action", "").strip()
+
+    if action:
+        query = query.filter(
+            AuditLog.action == action
+        )
+
+    try:
+        limit = min(
+            max(int(request.args.get("limit", 200)), 1),
+            500
+        )
+    except ValueError:
+        limit = 200
+
+    entries = query.order_by(
+        AuditLog.created_at.desc()
+    ).limit(limit).all()
+
+    return jsonify({
+        "success": True,
+        "entries": [
+            entry.to_dict()
+            for entry in entries
+        ]
+    })
 
 # ============================================================
 # ARTICLES API
@@ -1324,7 +1457,7 @@ def get_ctf_leaderboard():
 # ============================================================
 
 @app.route("/api/ctf", methods=["POST"])
-@role_required("admin")
+@role_required("admin", "moderator")
 def create_ctf_challenge():
     user = current_user()
     data = request.get_json(silent=True) or {}
@@ -1404,6 +1537,140 @@ def create_ctf_challenge():
         "challenge": challenge.to_dict()
     }), 201
 
+# ============================================================
+# CTF MANAGEMENT
+# ============================================================
+
+@app.route("/api/mod/ctf/challenges", methods=["GET"])
+@role_required("admin", "moderator")
+def get_manageable_ctf_challenges():
+
+    challenges = CTFChallenge.query.order_by(
+        CTFChallenge.created_at.desc()
+    ).all()
+
+    return jsonify({
+        "success": True,
+        "challenges": [
+            challenge.to_dict()
+            for challenge in challenges
+        ]
+    })
+
+
+@app.route("/api/ctf/<int:challenge_id>", methods=["PUT"])
+@role_required("admin", "moderator")
+def update_ctf_challenge(challenge_id):
+
+    challenge = db.session.get(
+        CTFChallenge,
+        challenge_id
+    )
+
+    if not challenge:
+        return jsonify({
+            "success": False,
+            "error": "CTF-задание не найдено"
+        }), 404
+
+    data = request.get_json(silent=True) or {}
+
+    title = data.get("title", "").strip()
+    description = data.get("description", "").strip()
+    difficulty = data.get("difficulty")
+    max_points = data.get("max_points")
+
+    if not title or not description:
+        return jsonify({
+            "success": False,
+            "error": "Заполните название и описание"
+        }), 400
+
+    if len(title) > 150 or len(description) > 20000:
+        return jsonify({
+            "success": False,
+            "error": "Превышена допустимая длина текста"
+        }), 400
+
+    allowed_difficulties = (
+        "Лёгкая",
+        "Средняя",
+        "Сложная",
+        "Экспертная"
+    )
+
+    if difficulty not in allowed_difficulties:
+        return jsonify({
+            "success": False,
+            "error": "Некорректная сложность"
+        }), 400
+
+    try:
+        max_points = int(max_points)
+    except (TypeError, ValueError):
+        return jsonify({
+            "success": False,
+            "error": "Некорректное количество баллов"
+        }), 400
+
+    if not 1 <= max_points <= 100000:
+        return jsonify({
+            "success": False,
+            "error": "Количество баллов должно быть от 1 до 100000"
+        }), 400
+
+    challenge.title = title
+    challenge.description = description
+    challenge.difficulty = difficulty
+    challenge.max_points = max_points
+
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "CTF-задание обновлено",
+        "challenge": challenge.to_dict()
+    })
+
+
+@app.route("/api/ctf/<int:challenge_id>", methods=["DELETE"])
+@role_required("admin", "moderator")
+def delete_ctf_challenge(challenge_id):
+
+    challenge = db.session.get(
+        CTFChallenge,
+        challenge_id
+    )
+
+    if not challenge:
+        return jsonify({
+            "success": False,
+            "error": "CTF-задание не найдено"
+        }), 404
+
+    submission_ids = [
+        row[0]
+        for row in db.session.query(CTFSubmission.id)
+        .filter_by(challenge_id=challenge_id)
+        .all()
+    ]
+
+    if submission_ids:
+        CTFMessage.query.filter(
+            CTFMessage.submission_id.in_(submission_ids)
+        ).delete(synchronize_session=False)
+
+        CTFSubmission.query.filter(
+            CTFSubmission.id.in_(submission_ids)
+        ).delete(synchronize_session=False)
+
+    db.session.delete(challenge)
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "message": "CTF-задание удалено"
+    })
 
 # ============================================================
 # CTF: GET PERSONAL SUBMISSION AND CHAT

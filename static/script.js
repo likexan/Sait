@@ -1047,13 +1047,17 @@ let activeModMaxPoints = 100;
 // ============================================================
 
 function updateCTFPermissions() {
-    const isAdmin = currentUser?.role === 'admin';
+const isAdmin = currentUser?.role === 'admin';
+
+const canManageCTF =
+    currentUser?.role === 'admin' ||
+    currentUser?.role === 'moderator';
 
     const canModerate =
         currentUser?.role === 'admin' ||
         currentUser?.role === 'moderator';
 
-    ctfAdminActions.hidden = !isAdmin;
+ctfAdminActions.hidden = !canManageCTF;
     ctfModNavLink.hidden = !canModerate;
 
     if (!isAdmin) {
@@ -1067,7 +1071,10 @@ function updateCTFPermissions() {
 // ============================================================
 
 function openCTFCreateForm() {
-    if (!currentUser || currentUser.role !== 'admin') {
+if (
+    !currentUser ||
+    !['admin', 'moderator'].includes(currentUser.role)
+) {
         return;
     }
 
@@ -1152,6 +1159,7 @@ async function showCTFMod() {
         behavior: 'smooth'
     });
 
+    switchModerationTab('ctf');
     await loadCTFModerationQueue();
 }
 
@@ -1814,6 +1822,368 @@ ctfCreateForm.addEventListener('submit', async (e) => {
 // ============================================================
 
 const ctfModList = document.getElementById('ctfModSubmissions');
+
+// ============================================================
+// MODERATION TABS
+// ============================================================
+
+const modTabButtons = document.querySelectorAll('[data-mod-tab]');
+
+function switchModerationTab(tab) {
+    const sections = {
+        ctf: document.getElementById('modTabCTF'),
+        users: document.getElementById('modTabUsers'),
+        audit: document.getElementById('modTabAudit')
+    };
+
+    Object.entries(sections).forEach(([name, element]) => {
+        element.hidden = name !== tab;
+    });
+
+    modTabButtons.forEach(button => {
+        const active = button.dataset.modTab === tab;
+
+        button.classList.toggle('btn-outline', !active);
+    });
+
+    if (tab === 'ctf') {
+        loadManageableCTF();
+    }
+
+    if (tab === 'users') {
+        loadModerationUsers();
+    }
+
+    if (tab === 'audit') {
+        loadAuditLog();
+    }
+}
+
+modTabButtons.forEach(button => {
+    button.addEventListener('click', () => {
+        switchModerationTab(button.dataset.modTab);
+    });
+});
+
+
+// ============================================================
+// CTF MANAGEMENT
+// ============================================================
+
+async function loadManageableCTF() {
+    const tbody = document.getElementById('modCTFTableBody');
+
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+        <tr><td colspan="5">Загрузка...</td></tr>
+    `;
+
+    try {
+        const data = await api('/api/mod/ctf/challenges');
+
+        if (!data.challenges.length) {
+            tbody.innerHTML = `
+                <tr><td colspan="5">Заданий пока нет</td></tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = data.challenges.map(challenge => `
+            <tr>
+                <td>${challenge.id}</td>
+                <td>${escapeHtml(challenge.title)}</td>
+                <td>${escapeHtml(challenge.difficulty)}</td>
+                <td>${challenge.max_points}</td>
+                <td>
+                    <button
+                        type="button"
+                        class="btn btn-outline mod-ctf-edit"
+                        data-id="${challenge.id}"
+                    >
+                        Изменить
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn btn-outline mod-ctf-delete"
+                        data-id="${challenge.id}"
+                    >
+                        Удалить
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        tbody.querySelectorAll('.mod-ctf-edit').forEach(button => {
+            button.addEventListener('click', () => {
+                editModerationCTF(Number(button.dataset.id));
+            });
+        });
+
+        tbody.querySelectorAll('.mod-ctf-delete').forEach(button => {
+            button.addEventListener('click', () => {
+                deleteModerationCTF(Number(button.dataset.id));
+            });
+        });
+
+    } catch (err) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5">${escapeHtml(err.message)}</td>
+            </tr>
+        `;
+    }
+}
+
+
+async function editModerationCTF(id) {
+    try {
+        const data = await api('/api/mod/ctf/challenges');
+        const challenge = data.challenges.find(item => item.id === id);
+
+        if (!challenge) {
+            throw new Error('Задание не найдено');
+        }
+
+        const title = prompt('Название задания:', challenge.title);
+
+        if (title === null) return;
+
+        const description = prompt(
+            'Описание задания:',
+            challenge.description
+        );
+
+        if (description === null) return;
+
+        const difficulty = prompt(
+            'Сложность (Лёгкая, Средняя, Сложная, Экспертная):',
+            challenge.difficulty
+        );
+
+        if (difficulty === null) return;
+
+        const points = prompt(
+            'Максимальное количество баллов:',
+            challenge.max_points
+        );
+
+        if (points === null) return;
+
+        const result = await api(`/api/ctf/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({
+                title,
+                description,
+                difficulty,
+                max_points: Number(points)
+            })
+        });
+
+        setMessage(
+            document.getElementById('modCTFMessage'),
+            result.message || 'Задание обновлено',
+            'success'
+        );
+
+        await loadManageableCTF();
+        await loadCTFChallenges();
+
+    } catch (err) {
+        setMessage(
+            document.getElementById('modCTFMessage'),
+            err.message,
+            'error'
+        );
+    }
+}
+
+
+async function deleteModerationCTF(id) {
+    const confirmed = confirm(
+        'Удалить это CTF-задание? Все связанные работы и переписки также будут удалены.'
+    );
+
+    if (!confirmed) return;
+
+    try {
+        const result = await api(`/api/ctf/${id}`, {
+            method: 'DELETE'
+        });
+
+        setMessage(
+            document.getElementById('modCTFMessage'),
+            result.message || 'Задание удалено',
+            'success'
+        );
+
+        await loadManageableCTF();
+        await loadCTFChallenges();
+
+    } catch (err) {
+        setMessage(
+            document.getElementById('modCTFMessage'),
+            err.message,
+            'error'
+        );
+    }
+}
+
+document.getElementById('modCTFRefreshBtn')
+    ?.addEventListener('click', loadManageableCTF);
+
+
+// ============================================================
+// MODERATION USER MANAGEMENT
+// ============================================================
+
+async function loadModerationUsers() {
+    const tbody = document.getElementById('modUsersTableBody');
+
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+        <tr><td colspan="4">Загрузка...</td></tr>
+    `;
+
+    try {
+        const data = await api('/api/users');
+
+        const search = (
+            document.getElementById('modUserSearch').value || ''
+        ).toLowerCase();
+
+        const users = data.users.filter(user =>
+            user.name.toLowerCase().includes(search) ||
+            user.email.toLowerCase().includes(search) ||
+            String(user.id).includes(search)
+        );
+
+        if (!users.length) {
+            tbody.innerHTML = `
+                <tr><td colspan="4">Пользователи не найдены</td></tr>
+            `;
+            return;
+        }
+
+        const isAdmin = currentUser.role === 'admin';
+
+        tbody.innerHTML = users.map(user => {
+            const role = isAdmin
+                ? `
+                    <select class="mod-user-role" data-id="${user.id}">
+                        <option value="member" ${user.role === 'member' ? 'selected' : ''}>Участник</option>
+                        <option value="moderator" ${user.role === 'moderator' ? 'selected' : ''}>Модератор</option>
+                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Администратор</option>
+                    </select>
+                `
+                : escapeHtml(user.role_label || user.role);
+
+            return `
+                <tr>
+                    <td>${user.id}</td>
+                    <td>${escapeHtml(user.name)}</td>
+                    <td>${escapeHtml(user.email)}</td>
+                    <td>${role}</td>
+                </tr>
+            `;
+        }).join('');
+
+        if (isAdmin) {
+            tbody.querySelectorAll('.mod-user-role').forEach(select => {
+                select.addEventListener('change', async () => {
+                    try {
+                        await api(`/api/users/${select.dataset.id}/role`, {
+                            method: 'PUT',
+                            body: JSON.stringify({
+                                role: select.value
+                            })
+                        });
+
+                        setMessage(
+                            document.getElementById('modUsersMessage'),
+                            'Роль пользователя обновлена',
+                            'success'
+                        );
+
+                        await loadModerationUsers();
+
+                    } catch (err) {
+                        setMessage(
+                            document.getElementById('modUsersMessage'),
+                            err.message,
+                            'error'
+                        );
+
+                        await loadModerationUsers();
+                    }
+                });
+            });
+        }
+
+    } catch (err) {
+        tbody.innerHTML = `
+            <tr><td colspan="4">${escapeHtml(err.message)}</td></tr>
+        `;
+    }
+}
+
+document.getElementById('modUserSearch')
+    ?.addEventListener('input', loadModerationUsers);
+
+
+// ============================================================
+// AUDIT LOG
+// ============================================================
+
+async function loadAuditLog() {
+    const tbody = document.getElementById('auditTableBody');
+
+    if (!tbody) return;
+
+    tbody.innerHTML = `
+        <tr><td colspan="5">Загрузка...</td></tr>
+    `;
+
+    try {
+        const userId = document.getElementById('auditUserFilter').value.trim();
+
+        const query = userId
+            ? `?user_id=${encodeURIComponent(userId)}`
+            : '';
+
+        const data = await api(`/api/mod/audit${query}`);
+
+        if (!data.entries.length) {
+            tbody.innerHTML = `
+                <tr><td colspan="5">Записей пока нет</td></tr>
+            `;
+            return;
+        }
+
+        tbody.innerHTML = data.entries.map(entry => `
+            <tr>
+                <td>${formatDateTime(entry.created_at)}</td>
+                <td>
+                    ${escapeHtml(entry.actor_name)}
+                    <small>#${entry.actor_id ?? '—'}</small>
+                </td>
+                <td>${escapeHtml(entry.action)}</td>
+                <td>${escapeHtml(entry.details)}</td>
+                <td>${escapeHtml(entry.ip_address || '—')}</td>
+            </tr>
+        `).join('');
+
+    } catch (err) {
+        tbody.innerHTML = `
+            <tr><td colspan="5">${escapeHtml(err.message)}</td></tr>
+        `;
+    }
+}
+
+document.getElementById('auditRefreshBtn')
+    ?.addEventListener('click', loadAuditLog);
 
 
 // ============================================================
