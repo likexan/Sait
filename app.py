@@ -1,5 +1,6 @@
 import os
 import uuid
+import re
 from datetime import datetime
 from functools import wraps
 from html import escape
@@ -35,6 +36,14 @@ ARTICLE_UPLOAD_FOLDER = os.path.join(
     "uploads",
     "articles"
 )
+
+AVATAR_UPLOAD_FOLDER = os.path.join(
+    app.static_folder,
+    "uploads",
+    "avatars"
+)
+
+os.makedirs(AVATAR_UPLOAD_FOLDER, exist_ok=True)
 
 os.makedirs(ARTICLE_UPLOAD_FOLDER, exist_ok=True)
 
@@ -73,6 +82,12 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="member")
+
+    # Данные публичного профиля
+    avatar = db.Column(db.String(500), nullable=True)
+    bio = db.Column(db.String(500), nullable=False, default="")
+    telegram = db.Column(db.String(32), nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     activities = db.relationship(
@@ -95,6 +110,10 @@ class User(db.Model):
             "email": self.email,
             "role": self.role,
             "role_label": ROLE_LABELS.get(self.role, self.role),
+            "avatar": self.avatar,
+            "bio": self.bio or "",
+            "telegram": self.telegram,
+            "points": get_user_points(self.id),
             "created_at": self.created_at.isoformat() + "Z",
         }
 
@@ -256,6 +275,22 @@ class CTFSubmission(db.Model):
             "updated_at": self.updated_at.isoformat() + "Z",
         }
 
+def get_user_points(user_id):
+    total = (
+        db.session.query(
+            db.func.coalesce(
+                db.func.sum(CTFSubmission.score),
+                0
+            )
+        )
+        .filter(
+            CTFSubmission.user_id == user_id,
+            CTFSubmission.status == "graded"
+        )
+        .scalar()
+    )
+
+    return int(total or 0)
 
 class CTFMessage(db.Model):
     __tablename__ = "ctf_messages"
@@ -749,7 +784,10 @@ def me():
 def update_profile():
     user = current_user()
     data = request.get_json(silent=True) or {}
+
     name = (data.get("name") or "").strip()
+    bio = data.get("bio", "")
+    telegram = (data.get("telegram") or "").strip()
 
     if len(name) < 2:
         return jsonify({
@@ -761,7 +799,30 @@ def update_profile():
             "error": "Имя слишком длинное"
         }), 400
 
+    if not isinstance(bio, str):
+        return jsonify({
+            "error": "Биография должна быть текстом"
+        }), 400
+
+    bio = bio.strip()
+
+    if len(bio) > 500:
+        return jsonify({
+            "error": "Биография не должна превышать 500 символов"
+        }), 400
+
+    # Разрешаем ввод как с @, так и без него
+    telegram = telegram.lstrip("@")
+
+    if telegram and not re.fullmatch(r"[A-Za-z0-9_]{5,32}", telegram):
+        return jsonify({
+            "error": "Некорректный Telegram username"
+        }), 400
+
     user.name = name
+    user.bio = bio
+    user.telegram = telegram or None
+
     db.session.commit()
 
     add_activity(user, "Обновление профиля")
@@ -770,6 +831,112 @@ def update_profile():
         "user": user.to_dict()
     })
 
+@app.route("/api/users/<int:user_id>/profile", methods=["GET"])
+def get_public_profile(user_id):
+    user = db.session.get(User, user_id)
+
+    if not user:
+        return jsonify({
+            "error": "Пользователь не найден"
+        }), 404
+
+    completed_count = CTFSubmission.query.filter_by(
+        user_id=user.id,
+        status="graded"
+    ).count()
+
+    return jsonify({
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "role": user.role,
+            "role_label": ROLE_LABELS.get(user.role, user.role),
+            "avatar": user.avatar,
+            "bio": user.bio or "",
+            "telegram": user.telegram,
+            "points": get_user_points(user.id),
+            "completed_count": completed_count,
+            "created_at": (
+                user.created_at.isoformat() + "Z"
+                if user.created_at else None
+            )
+        }
+    })
+
+@app.route("/api/profile/avatar", methods=["POST"])
+@login_required
+def upload_avatar():
+    user = current_user()
+    file = request.files.get("avatar")
+
+    if not file or not file.filename:
+        return jsonify({
+            "error": "Выберите изображение"
+        }), 400
+
+    filename = secure_filename(file.filename)
+
+    if "." not in filename:
+        return jsonify({
+            "error": "Некорректный файл"
+        }), 400
+
+    extension = filename.rsplit(".", 1)[1].lower()
+
+    if extension not in ALLOWED_IMAGE_EXTENSIONS:
+        return jsonify({
+            "error": "Разрешены PNG, JPG, JPEG, WEBP и GIF"
+        }), 400
+
+    file.seek(0, os.SEEK_END)
+    file_size = file.tell()
+    file.seek(0)
+
+    if file_size > 5 * 1024 * 1024:
+        return jsonify({
+            "error": "Максимальный размер аватара — 5 МБ"
+        }), 400
+
+    unique_name = f"{uuid.uuid4().hex}.{extension}"
+    save_path = os.path.join(
+        AVATAR_UPLOAD_FOLDER,
+        unique_name
+    )
+
+    try:
+        file.save(save_path)
+    except OSError:
+        return jsonify({
+            "error": "Не удалось сохранить изображение"
+        }), 500
+
+    old_avatar = user.avatar
+    user.avatar = f"/static/uploads/avatars/{unique_name}"
+
+    db.session.commit()
+
+    # Удаляем старый аватар только из папки аватаров
+    if old_avatar and old_avatar.startswith(
+        "/static/uploads/avatars/"
+    ):
+        old_filename = os.path.basename(old_avatar)
+        old_path = os.path.join(
+            AVATAR_UPLOAD_FOLDER,
+            old_filename
+        )
+
+        if os.path.isfile(old_path):
+            try:
+                os.remove(old_path)
+            except OSError:
+                pass
+
+    add_activity(user, "Изменение аватара")
+
+    return jsonify({
+        "ok": True,
+        "user": user.to_dict()
+    })
 
 @app.route("/api/activities", methods=["GET"])
 @login_required
@@ -1646,6 +1813,24 @@ with app.app_context():
         if first:
             first.role = "admin"
             db.session.commit()
+
+    # Миграция полей публичного профиля
+    profile_columns = {
+        "avatar": "VARCHAR(500)",
+        "bio": "VARCHAR(500) NOT NULL DEFAULT ''",
+        "telegram": "VARCHAR(32)"
+    }
+
+    for column_name, column_type in profile_columns.items():
+        if column_name not in cols:
+            with db.engine.connect() as conn:
+                conn.execute(
+                    text(
+                        f"ALTER TABLE users "
+                        f"ADD COLUMN {column_name} {column_type}"
+                    )
+                )
+                conn.commit()
 
 
 # ============================================================

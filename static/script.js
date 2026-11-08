@@ -216,9 +216,17 @@ const registerFormEl = document.getElementById('registerFormEl');
 const loginError = document.getElementById('loginError');
 const registerError = document.getElementById('registerError');
 
-const mainContent = document.getElementById('mainContent');
-const cabinet = document.getElementById('cabinet');
-const siteFooter = document.getElementById('siteFooter');
+const publicProfilePage = document.getElementById('publicProfilePage');
+const publicProfileBack = document.getElementById('publicProfileBack');
+
+const publicProfileAvatar = document.getElementById('publicProfileAvatar');
+const publicProfileName = document.getElementById('publicProfileName');
+const publicProfileRole = document.getElementById('publicProfileRole');
+const publicProfileBio = document.getElementById('publicProfileBio');
+const publicProfilePoints = document.getElementById('publicProfilePoints');
+const publicProfileCompleted = document.getElementById('publicProfileCompleted');
+const publicProfileDate = document.getElementById('publicProfileDate');
+const publicProfileTelegram = document.getElementById('publicProfileTelegram');
 
 const backToSite = document.getElementById('backToSite');
 const logoLink = document.getElementById('logoLink');
@@ -230,8 +238,16 @@ const profileRole = document.getElementById('profileRole');
 const profileDate = document.getElementById('profileDate');
 
 const editName = document.getElementById('editName');
+const editBio = document.getElementById('editBio');
+const editTelegram = document.getElementById('editTelegram');
+
 const profileForm = document.getElementById('profileForm');
 const profileMessage = document.getElementById('profileMessage');
+
+const avatarInput = document.getElementById('avatarInput');
+const avatarMessage = document.getElementById('avatarMessage');
+const profileAvatarPreview = document.getElementById('profileAvatarPreview');
+const profilePoints = document.getElementById('profilePoints');
 
 const activityList = document.getElementById('activityList');
 
@@ -338,9 +354,12 @@ function updateAuthUI() {
         userMenu.hidden = false;
 
         userName.textContent = currentUser.name;
-        userAvatar.textContent = currentUser.name
-            .charAt(0)
-            .toUpperCase();
+
+        renderAvatar(
+            userAvatar,
+            currentUser.avatar,
+            currentUser.name
+        );
     } else {
         loginBtn.hidden = false;
         userMenu.hidden = true;
@@ -354,6 +373,31 @@ function setRoleBadge(element, user) {
 
     element.className =
         'role-badge role-' + (user.role || 'member');
+}
+function renderAvatar(element, avatarUrl, name) {
+    if (!element) return;
+
+    element.replaceChildren();
+
+    if (avatarUrl) {
+        const image = document.createElement('img');
+
+        image.src = avatarUrl;
+        image.alt = 'Аватар пользователя';
+        image.className = 'avatar-image';
+
+        image.onerror = () => {
+            element.textContent = (name || 'U')
+                .charAt(0)
+                .toUpperCase();
+        };
+
+        element.appendChild(image);
+    } else {
+        element.textContent = (name || 'U')
+            .charAt(0)
+            .toUpperCase();
+    }
 }
 
 
@@ -467,6 +511,7 @@ logoutBtn.addEventListener('click', async () => {
 function hideAllPages() {
     mainContent.hidden = true;
     cabinet.hidden = true;
+    publicProfilePage.hidden = true;
     ctfPage.hidden = true;
     ctfModPage.hidden = true;
     ctfLeaderboardPage.hidden = true;
@@ -528,7 +573,21 @@ async function showCabinet() {
         currentUser.created_at
     );
 
-    editName.value = currentUser.name;
+editName.value = currentUser.name || '';
+editBio.value = currentUser.bio || '';
+editTelegram.value = currentUser.telegram
+    ? '@' + currentUser.telegram
+    : '';
+
+profilePoints.textContent = Number(
+    currentUser.points || 0
+).toLocaleString('ru-RU');
+
+renderAvatar(
+    profileAvatarPreview,
+    currentUser.avatar,
+    currentUser.name
+);
 
     activityList.innerHTML = '<li>Загрузка…</li>';
 
@@ -697,6 +756,8 @@ profileForm.addEventListener('submit', async (e) => {
     setMessage(profileMessage, '');
 
     const name = editName.value.trim();
+    const bio = editBio.value.trim();
+    const telegram = editTelegram.value.trim();
 
     if (name.length < 2) {
         setMessage(
@@ -707,10 +768,23 @@ profileForm.addEventListener('submit', async (e) => {
         return;
     }
 
+    if (bio.length > 500) {
+        setMessage(
+            profileMessage,
+            'Биография не должна превышать 500 символов',
+            'error'
+        );
+        return;
+    }
+
     try {
         const data = await api('/api/profile', {
             method: 'PUT',
-            body: JSON.stringify({ name })
+            body: JSON.stringify({
+                name,
+                bio,
+                telegram
+            })
         });
 
         currentUser = data.user;
@@ -719,6 +793,16 @@ profileForm.addEventListener('submit', async (e) => {
 
         cabinetName.textContent = currentUser.name;
         profileName.textContent = currentUser.name;
+
+        profilePoints.textContent = Number(
+            currentUser.points || 0
+        ).toLocaleString('ru-RU');
+
+        renderAvatar(
+            profileAvatarPreview,
+            currentUser.avatar,
+            currentUser.name
+        );
 
         setMessage(
             profileMessage,
@@ -736,6 +820,176 @@ profileForm.addEventListener('submit', async (e) => {
 });
 
 
+// ============================================================
+// AVATAR UPLOAD
+// ============================================================
+
+avatarInput.addEventListener('change', async () => {
+    const file = avatarInput.files[0];
+
+    if (!file) return;
+
+    setMessage(avatarMessage, '');
+
+    if (file.size > 5 * 1024 * 1024) {
+        setMessage(
+            avatarMessage,
+            'Максимальный размер изображения — 5 МБ',
+            'error'
+        );
+
+        avatarInput.value = '';
+        return;
+    }
+
+    const allowedTypes = [
+        'image/png',
+        'image/jpeg',
+        'image/webp',
+        'image/gif'
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+        setMessage(
+            avatarMessage,
+            'Неподдерживаемый формат изображения',
+            'error'
+        );
+
+        avatarInput.value = '';
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+        const response = await fetch('/api/profile/avatar', {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(
+                data.error || 'Не удалось загрузить аватар'
+            );
+        }
+
+        currentUser = data.user;
+
+        renderAvatar(
+            profileAvatarPreview,
+            currentUser.avatar,
+            currentUser.name
+        );
+
+        updateAuthUI();
+
+        setMessage(
+            avatarMessage,
+            'Аватар успешно обновлён',
+            'success'
+        );
+
+    } catch (err) {
+        setMessage(
+            avatarMessage,
+            err.message,
+            'error'
+        );
+    } finally {
+        avatarInput.value = '';
+    }
+});
+
+// ============================================================
+// PUBLIC USER PROFILE
+// ============================================================
+
+async function showPublicProfile(userId) {
+    if (!userId || !Number.isInteger(Number(userId))) {
+        return;
+    }
+
+    hideAllPages();
+
+    publicProfilePage.hidden = false;
+
+    publicProfileName.textContent = 'Загрузка...';
+    publicProfileBio.textContent = '';
+    publicProfilePoints.textContent = '—';
+    publicProfileCompleted.textContent = '—';
+    publicProfileDate.textContent = '—';
+
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+
+    try {
+        const data = await api(
+            `/api/users/${Number(userId)}/profile`
+        );
+
+        const user = data.user;
+
+        publicProfileName.textContent = user.name;
+        publicProfileBio.textContent = user.bio ||
+            'Пользователь пока ничего не рассказал о себе.';
+
+        publicProfileRole.textContent = user.role_label || user.role;
+        publicProfileRole.className =
+            'role-badge role-' + (user.role || 'member');
+
+        publicProfilePoints.textContent = Number(
+            user.points || 0
+        ).toLocaleString('ru-RU');
+
+        publicProfileCompleted.textContent = Number(
+            user.completed_count || 0
+        ).toLocaleString('ru-RU');
+
+        publicProfileDate.textContent = formatDate(
+            user.created_at
+        );
+
+        renderAvatar(
+            publicProfileAvatar,
+            user.avatar,
+            user.name
+        );
+
+        if (user.telegram) {
+            const username = String(user.telegram).replace(/^@/, '');
+
+            if (/^[A-Za-z0-9_]{5,32}$/.test(username)) {
+                publicProfileTelegram.href =
+                    `https://t.me/${encodeURIComponent(username)}`;
+
+                publicProfileTelegram.hidden = false;
+            } else {
+                publicProfileTelegram.hidden = true;
+            }
+        } else {
+            publicProfileTelegram.hidden = true;
+        }
+
+    } catch (err) {
+        publicProfileName.textContent = 'Профиль недоступен';
+        publicProfileBio.textContent = err.message;
+    }
+}
+
+publicProfileBack.addEventListener('click', () => {
+    if (currentUser) {
+        showCTFLeaderboard();
+    } else {
+        showMain();
+    }
+});
 // ============================================================
 // CTF ELEMENTS
 // ============================================================
@@ -992,10 +1246,11 @@ async function loadCTFLeaderboard() {
 
         const getPoints = user => Number(user.points) || 0;
         const getCompleted = user => Number(user.completed) || 0;
-        const isCurrentUser = user =>
-            currentUser &&
-            user.id !== undefined &&
-            Number(user.id) === Number(currentUser.id);
+const getUserId = user => Number(user.user_id);
+
+const isCurrentUser = user =>
+    currentUser &&
+    getUserId(user) === Number(currentUser.id);
 
         const topThree = leaderboard.slice(0, 3);
         const remaining = leaderboard.slice(3);
@@ -1011,8 +1266,14 @@ async function loadCTFLeaderboard() {
             const isFirst = rank === 1;
 
             return `
-                <article class="leaderboard-podium-card rank-${rank}
-                    ${isCurrentUser(user) ? 'is-current-user' : ''}">
+<article
+    class="leaderboard-podium-card rank-${rank} leaderboard-clickable"
+    data-profile-user="${getUserId(user)}"
+    role="button"
+    tabindex="0"
+    aria-label="Открыть профиль ${escapeHtml(user.name)}"
+    ${isCurrentUser(user) ? 'is-current-user' : ''}
+>
 
                     <div class="leaderboard-podium-top">
                         <span class="leaderboard-rank">
@@ -1057,8 +1318,14 @@ async function loadCTFLeaderboard() {
             const rank = Number(user.rank) || '—';
 
             return `
-                <div class="leaderboard-row
-                    ${isCurrentUser(user) ? 'is-current-user' : ''}">
+<div
+    class="leaderboard-row leaderboard-clickable"
+    data-profile-user="${getUserId(user)}"
+    role="button"
+    tabindex="0"
+    aria-label="Открыть профиль ${escapeHtml(user.name)}"
+    ${isCurrentUser(user) ? 'is-current-user' : ''}
+>
 
                     <div class="leaderboard-row-rank">
                         ${String(rank).padStart(2, '0')}
@@ -1127,6 +1394,29 @@ async function loadCTFLeaderboard() {
                 </div>
             ` : ''}
         `;
+        ctfLeaderboardContent
+            .querySelectorAll('[data-profile-user]')
+            .forEach(element => {
+
+                element.addEventListener('click', () => {
+                    showPublicProfile(
+                        element.dataset.profileUser
+                    );
+                });
+
+                element.addEventListener('keydown', event => {
+                    if (
+                        event.key === 'Enter' ||
+                        event.key === ' '
+                    ) {
+                        event.preventDefault();
+
+                        showPublicProfile(
+                            element.dataset.profileUser
+                        );
+                    }
+                });
+            });
 
     } catch (err) {
         ctfLeaderboardContent.innerHTML = `

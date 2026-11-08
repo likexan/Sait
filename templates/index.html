@@ -396,7 +396,7 @@
             </button>
 
             <div class="user-dropdown" id="userDropdown">
-                <a href="#cabinet" id="cabinetLink">Личный кабинет</a>
+                <a href="#cabinet" id="cabinetLink">Безопасность</a>
                 <button id="logoutBtn">Выйти</button>
             </div>
         </div>
@@ -552,7 +552,7 @@
     <div class="cabinet-inner">
 
         <header class="cabinet-header">
-            <h1>Личный кабинет</h1>
+            <h1>Безопасность и настройки</h1>
             <p class="cabinet-greeting">
                 Добро пожаловать, <span id="cabinetName">User</span>
             </p>
@@ -560,41 +560,106 @@
 
         <div class="cabinet-grid">
 
-            <div class="cabinet-card">
-                <h3>Профиль</h3>
-                <div class="profile-info">
-                    <div class="info-row">
-                        <span class="info-label">Имя</span>
-                        <span class="info-value" id="profileName">—</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Email</span>
-                        <span class="info-value" id="profileEmail">—</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Роль</span>
-                        <span class="info-value">
-                            <span class="role-badge" id="profileRole">—</span>
-                        </span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Дата регистрации</span>
-                        <span class="info-value" id="profileDate">—</span>
-                    </div>
-                </div>
-            </div>
+<div class="cabinet-card">
+    <h3>Мой аккаунт</h3>
 
-            <div class="cabinet-card">
-                <h3>Настройки</h3>
-                <form id="profileForm" class="profile-form">
-                    <div class="form-group">
-                        <label for="editName">Имя</label>
-                        <input type="text" id="editName" required minlength="2">
-                    </div>
-                    <button type="submit" class="btn btn-full">Сохранить</button>
-                </form>
-                <p class="form-message" id="profileMessage"></p>
-            </div>
+    <div class="profile-avatar-editor">
+        <div class="profile-avatar-preview" id="profileAvatarPreview">
+            U
+        </div>
+
+        <div class="profile-avatar-controls">
+            <label for="avatarInput" class="btn btn-outline">
+                Изменить аватар
+            </label>
+
+            <input
+                type="file"
+                id="avatarInput"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                hidden
+            >
+
+            <p>PNG, JPG, WEBP или GIF. До 5 МБ.</p>
+        </div>
+    </div>
+
+    <div class="profile-info">
+        <div class="info-row">
+            <span class="info-label">Имя</span>
+            <span class="info-value" id="profileName">—</span>
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">Email</span>
+            <span class="info-value" id="profileEmail">—</span>
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">Роль</span>
+            <span class="info-value">
+                <span class="role-badge" id="profileRole">—</span>
+            </span>
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">Баллы</span>
+            <span class="info-value" id="profilePoints">0</span>
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">Дата регистрации</span>
+            <span class="info-value" id="profileDate">—</span>
+        </div>
+    </div>
+
+    <p class="form-message" id="avatarMessage"></p>
+</div>
+
+<div class="cabinet-card">
+    <h3>Настройки профиля</h3>
+
+    <form id="profileForm" class="profile-form">
+        <div class="form-group">
+            <label for="editName">Имя пользователя</label>
+            <input
+                type="text"
+                id="editName"
+                required
+                minlength="2"
+                maxlength="100"
+            >
+        </div>
+
+        <div class="form-group">
+            <label for="editBio">Биография</label>
+            <textarea
+                id="editBio"
+                rows="5"
+                maxlength="500"
+                placeholder="Расскажите немного о себе..."
+            ></textarea>
+            <small>Максимум 500 символов.</small>
+        </div>
+
+        <div class="form-group">
+            <label for="editTelegram">Telegram</label>
+            <input
+                type="text"
+                id="editTelegram"
+                maxlength="33"
+                placeholder="@username"
+            >
+            <small>Укажите свой username, например @username.</small>
+        </div>
+
+        <button type="submit" class="btn btn-full">
+            Сохранить изменения
+        </button>
+    </form>
+
+    <p class="form-message" id="profileMessage"></p>
+</div>
 
             <div class="cabinet-card cabinet-card-wide">
                 <h3>Активность</h3>
@@ -624,6 +689,76 @@
         </div>
 
         <button class="btn btn-outline" id="backToSite">← На главную</button>
+    </div>
+</section>
+
+
+<!-- PUBLIC USER PROFILE -->
+<section class="cabinet public-profile-page" id="publicProfilePage" hidden>
+    <div class="cabinet-inner">
+
+        <button
+            type="button"
+            class="btn btn-outline"
+            id="publicProfileBack"
+        >
+            ← Назад
+        </button>
+
+        <div class="public-profile-card">
+
+            <div class="public-profile-header">
+                <div
+                    class="public-profile-avatar"
+                    id="publicProfileAvatar"
+                >
+                    U
+                </div>
+
+                <div class="public-profile-heading">
+                    <p class="hero-label">BLIND / USER PROFILE</p>
+                    <h1 id="publicProfileName">Пользователь</h1>
+                    <span
+                        class="role-badge"
+                        id="publicProfileRole"
+                    >Участник</span>
+                </div>
+            </div>
+
+            <div class="public-profile-bio">
+                <h3>О пользователе</h3>
+                <p id="publicProfileBio">Пользователь пока ничего не рассказал о себе.</p>
+            </div>
+
+            <div class="public-profile-stats">
+                <div class="public-profile-stat">
+                    <span>Баллы</span>
+                    <strong id="publicProfilePoints">0</strong>
+                </div>
+
+                <div class="public-profile-stat">
+                    <span>Решено заданий</span>
+                    <strong id="publicProfileCompleted">0</strong>
+                </div>
+
+                <div class="public-profile-stat">
+                    <span>Регистрация</span>
+                    <strong id="publicProfileDate">—</strong>
+                </div>
+            </div>
+
+            <a
+                class="btn btn-outline public-profile-telegram"
+                id="publicProfileTelegram"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+                hidden
+            >
+                Открыть Telegram ↗
+            </a>
+
+        </div>
     </div>
 </section>
 
