@@ -2079,6 +2079,21 @@ def request_entity_too_large(error):
 with app.app_context():
     db.create_all()
 
+    # Однократное назначение администратора через Render
+    admin_email = os.environ.get("BOOTSTRAP_ADMIN_EMAIL", "").strip().lower()
+
+    if admin_email:
+        user = User.query.filter(
+            db.func.lower(User.email) == admin_email
+        ).first()
+
+        if user:
+            user.role = "admin"
+            db.session.commit()
+            print(f"Administrator role assigned to: {admin_email}")
+        else:
+            print(f"Admin account not found: {admin_email}")
+
     inspector = inspect(db.engine)
 
     cols = [
