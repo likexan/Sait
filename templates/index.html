@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -342,6 +343,36 @@
           <p class="form-message" id="ctfCreateMessage"></p>
 
         </form>
+
+      </div>
+
+
+      <!-- Список лидеров -->
+      <div class="ctf-leaderboard-section">
+
+        <button
+          type="button"
+          id="ctfLeaderboardToggle"
+          class="btn btn-secondary"
+          aria-expanded="false"
+          aria-controls="ctfLeaderboardPanel"
+        >
+          <span>🏆</span>
+          Список лидеров
+        </button>
+
+        <div id="ctfLeaderboardPanel" hidden>
+
+          <div class="ctf-leaderboard-header">
+            <h2>Таблица лидеров</h2>
+            <p>Участники с наибольшим количеством баллов</p>
+          </div>
+
+          <div id="ctfLeaderboardContent">
+            <p class="ctf-empty">Нажмите кнопку, чтобы загрузить рейтинг.</p>
+          </div>
+
+        </div>
 
       </div>
 

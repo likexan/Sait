@@ -639,12 +639,13 @@ def get_ctf_challenges():
     })
 
 
+
 # ============================================================
 # CTF: CREATE CHALLENGE
 # ============================================================
 
 @app.route("/api/ctf", methods=["POST"])
-@role_required("moderator", "admin")
+@role_required("admin")
 def create_ctf_challenge():
     user = current_user()
     data = request.get_json(silent=True) or {}
@@ -1098,9 +1099,6 @@ def grade_ctf_submission(submission_id):
 
 with app.app_context():
     db.create_all()
-
-    # Migration for older databases:
-    # add role column if it does not exist.
 
     from sqlalchemy import text, inspect
 

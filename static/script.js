@@ -1,4 +1,8 @@
-// ===== Theme Toggle =====
+
+// ============================================================
+// THEME
+// ============================================================
+
 const themeToggle = document.getElementById('themeToggle');
 const html = document.documentElement;
 
@@ -6,109 +10,190 @@ const savedTheme = localStorage.getItem('theme');
 const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 if (savedTheme) {
-  html.setAttribute('data-theme', savedTheme);
+    html.setAttribute('data-theme', savedTheme);
 } else if (systemDark) {
-  html.setAttribute('data-theme', 'dark');
+    html.setAttribute('data-theme', 'dark');
 }
 
-themeToggle.addEventListener('click', () => {
-  const current = html.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
+themeToggle?.addEventListener('click', () => {
+    const current = html.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+
+    html.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
 });
 
-// ===== Custom Cursor =====
+
+// ============================================================
+// CUSTOM CURSOR
+// ============================================================
+
 const cursor = document.getElementById('cursor');
 const follower = document.getElementById('cursorFollower');
 
-let mouseX = 0, mouseY = 0;
-let followerX = 0, followerY = 0;
+let mouseX = 0;
+let mouseY = 0;
+let followerX = 0;
+let followerY = 0;
 
-document.addEventListener('mousemove', (e) => {
-  mouseX = e.clientX;
-  mouseY = e.clientY;
-  cursor.style.left = mouseX + 'px';
-  cursor.style.top = mouseY + 'px';
-});
+if (cursor && follower) {
+    document.addEventListener('mousemove', (e) => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
 
-function animateFollower() {
-  followerX += (mouseX - followerX) * 0.12;
-  followerY += (mouseY - followerY) * 0.12;
-  follower.style.left = followerX + 'px';
-  follower.style.top = followerY + 'px';
-  requestAnimationFrame(animateFollower);
-}
-animateFollower();
-
-function setupCursorHover() {
-  document.querySelectorAll('a, button, .project, input, select').forEach(el => {
-    el.addEventListener('mouseenter', () => {
-      cursor.style.width = '12px';
-      cursor.style.height = '12px';
-      follower.style.width = '48px';
-      follower.style.height = '48px';
+        cursor.style.left = `${mouseX}px`;
+        cursor.style.top = `${mouseY}px`;
     });
-    el.addEventListener('mouseleave', () => {
-      cursor.style.width = '8px';
-      cursor.style.height = '8px';
-      follower.style.width = '36px';
-      follower.style.height = '36px';
-    });
-  });
-}
-setupCursorHover();
 
-// ===== Navbar scroll =====
+    function animateFollower() {
+        followerX += (mouseX - followerX) * 0.12;
+        followerY += (mouseY - followerY) * 0.12;
+
+        follower.style.left = `${followerX}px`;
+        follower.style.top = `${followerY}px`;
+
+        requestAnimationFrame(animateFollower);
+    }
+
+    animateFollower();
+
+    function setupCursorHover() {
+        document.querySelectorAll(
+            'a, button, .project, input, select, textarea'
+        ).forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursor.style.width = '12px';
+                cursor.style.height = '12px';
+                follower.style.width = '48px';
+                follower.style.height = '48px';
+            });
+
+            el.addEventListener('mouseleave', () => {
+                cursor.style.width = '8px';
+                cursor.style.height = '8px';
+                follower.style.width = '36px';
+                follower.style.height = '36px';
+            });
+        });
+    }
+
+    setupCursorHover();
+}
+
+
+// ============================================================
+// NAVBAR AND SCROLL
+// ============================================================
+
 const nav = document.querySelector('.nav');
+
 window.addEventListener('scroll', () => {
-  nav.classList.toggle('scrolled', window.scrollY > 40);
+    nav?.classList.toggle('scrolled', window.scrollY > 40);
 });
 
-// ===== Scroll reveal =====
-const revealElements = document.querySelectorAll('.project, .about-content, .contact');
+const revealElements = document.querySelectorAll(
+    '.project, .about-content, .contact'
+);
+
 revealElements.forEach(el => el.classList.add('reveal'));
 
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) entry.target.classList.add('visible');
-  });
-}, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('visible');
+            }
+        });
+    }, {
+        threshold: 0.15,
+        rootMargin: '0px 0px -40px 0px'
+    });
 
-revealElements.forEach(el => observer.observe(el));
-
-// ===== Smooth anchors =====
-document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-  anchor.addEventListener('click', function (e) {
-    const targetId = this.getAttribute('href');
-    if (targetId === '#' || targetId === '#cabinet') return;
-    e.preventDefault();
-    const target = document.querySelector(targetId);
-    if (target) {
-      const top = target.getBoundingClientRect().top + window.scrollY - 80;
-      window.scrollTo({ top, behavior: 'smooth' });
-    }
-  });
-});
-
-// ===== API helpers =====
-async function api(url, options = {}) {
-  const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-    credentials: 'same-origin',
-    ...options,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const err = new Error(data.error || 'Ошибка сервера');
-    err.status = res.status;
-    err.data = data;
-    throw err;
-  }
-  return data;
+    revealElements.forEach(el => observer.observe(el));
 }
 
-// ===== UI Elements =====
+
+// ============================================================
+// API
+// ============================================================
+
+async function api(url, options = {}) {
+    const res = await fetch(url, {
+        ...options,
+        headers: {
+            'Content-Type': 'application/json',
+            ...(options.headers || {})
+        },
+        credentials: 'same-origin'
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+        const error = new Error(
+            data.error || 'Ошибка сервера'
+        );
+
+        error.status = res.status;
+        error.data = data;
+
+        throw error;
+    }
+
+    return data;
+}
+
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function escapeHtml(value) {
+    const element = document.createElement('div');
+    element.textContent = String(value ?? '');
+    return element.innerHTML;
+}
+
+function formatDate(iso) {
+    if (!iso) return '—';
+
+    try {
+        return new Date(iso).toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+    } catch {
+        return '—';
+    }
+}
+
+function formatDateTime(iso) {
+    if (!iso) return '—';
+
+    try {
+        return new Date(iso).toLocaleString('ru-RU');
+    } catch {
+        return '—';
+    }
+}
+
+function setMessage(element, message, type = '') {
+    if (!element) return;
+
+    element.textContent = message;
+    element.className = 'form-message';
+
+    if (type) {
+        element.classList.add(type);
+    }
+}
+
+
+// ============================================================
+// UI ELEMENTS
+// ============================================================
+
 const loginBtn = document.getElementById('loginBtn');
 const userMenu = document.getElementById('userMenu');
 const userBtn = document.getElementById('userBtn');
@@ -119,19 +204,23 @@ const cabinetLink = document.getElementById('cabinetLink');
 
 const authModal = document.getElementById('authModal');
 const modalClose = document.getElementById('modalClose');
+
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
+
 const showRegister = document.getElementById('showRegister');
 const showLogin = document.getElementById('showLogin');
 
 const loginFormEl = document.getElementById('loginFormEl');
 const registerFormEl = document.getElementById('registerFormEl');
+
 const loginError = document.getElementById('loginError');
 const registerError = document.getElementById('registerError');
 
 const mainContent = document.getElementById('mainContent');
 const cabinet = document.getElementById('cabinet');
 const siteFooter = document.getElementById('siteFooter');
+
 const backToSite = document.getElementById('backToSite');
 const logoLink = document.getElementById('logoLink');
 
@@ -140,10 +229,13 @@ const profileName = document.getElementById('profileName');
 const profileEmail = document.getElementById('profileEmail');
 const profileRole = document.getElementById('profileRole');
 const profileDate = document.getElementById('profileDate');
+
 const editName = document.getElementById('editName');
 const profileForm = document.getElementById('profileForm');
 const profileMessage = document.getElementById('profileMessage');
+
 const activityList = document.getElementById('activityList');
+
 const usersPanel = document.getElementById('usersPanel');
 const usersTableBody = document.getElementById('usersTableBody');
 const usersMessage = document.getElementById('usersMessage');
@@ -151,358 +243,223 @@ const usersMessage = document.getElementById('usersMessage');
 let currentUser = null;
 
 const ROLE_OPTIONS = [
-  { value: 'member', label: 'Участник' },
-  { value: 'moderator', label: 'Модератор' },
-  { value: 'admin', label: 'Администратор' },
+    { value: 'member', label: 'Участник' },
+    { value: 'moderator', label: 'Модератор' },
+    { value: 'admin', label: 'Администратор' }
 ];
 
-// ===== Auth UI =====
+
+// ============================================================
+// AUTH MODAL
+// ============================================================
+
 function openModal() {
-  authModal.hidden = false;
-  requestAnimationFrame(() => authModal.classList.add('active'));
-  document.body.style.overflow = 'hidden';
+    authModal.hidden = false;
+
+    requestAnimationFrame(() => {
+        authModal.classList.add('active');
+    });
+
+    document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
-  authModal.classList.remove('active');
-  setTimeout(() => {
-    authModal.hidden = true;
-    document.body.style.overflow = '';
-    loginError.textContent = '';
-    registerError.textContent = '';
-    loginFormEl.reset();
-    registerFormEl.reset();
-  }, 250);
+    authModal.classList.remove('active');
+
+    setTimeout(() => {
+        authModal.hidden = true;
+        document.body.style.overflow = '';
+
+        loginError.textContent = '';
+        registerError.textContent = '';
+
+        loginFormEl.reset();
+        registerFormEl.reset();
+    }, 250);
 }
 
 function showLoginForm() {
-  loginForm.hidden = false;
-  registerForm.hidden = true;
-  loginError.textContent = '';
-  registerError.textContent = '';
+    loginForm.hidden = false;
+    registerForm.hidden = true;
+
+    loginError.textContent = '';
+    registerError.textContent = '';
 }
 
 function showRegisterForm() {
-  loginForm.hidden = true;
-  registerForm.hidden = false;
-  loginError.textContent = '';
-  registerError.textContent = '';
+    loginForm.hidden = true;
+    registerForm.hidden = false;
+
+    loginError.textContent = '';
+    registerError.textContent = '';
 }
 
 loginBtn.addEventListener('click', () => {
-  showLoginForm();
-  openModal();
+    showLoginForm();
+    openModal();
 });
 
 modalClose.addEventListener('click', closeModal);
+
 authModal.addEventListener('click', (e) => {
-  if (e.target === authModal) closeModal();
+    if (e.target === authModal) {
+        closeModal();
+    }
 });
 
 showRegister.addEventListener('click', showRegisterForm);
 showLogin.addEventListener('click', showLoginForm);
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && authModal.classList.contains('active')) closeModal();
+    if (
+        e.key === 'Escape' &&
+        authModal.classList.contains('active')
+    ) {
+        closeModal();
+    }
 });
 
 userBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  userMenu.classList.toggle('open');
+    e.stopPropagation();
+    userMenu.classList.toggle('open');
 });
 
-document.addEventListener('click', () => userMenu.classList.remove('open'));
-
-// ===== Register =====
-registerFormEl.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  registerError.textContent = '';
-
-  const name = document.getElementById('regName').value.trim();
-  const email = document.getElementById('regEmail').value.trim().toLowerCase();
-  const password = document.getElementById('regPassword').value;
-  const password2 = document.getElementById('regPassword2').value;
-
-  if (password !== password2) {
-    registerError.textContent = 'Пароли не совпадают';
-    return;
-  }
-
-  try {
-    const data = await api('/api/register', {
-      method: 'POST',
-      body: JSON.stringify({ name, email, password }),
-    });
-    currentUser = data.user;
-    closeModal();
-    updateAuthUI();
-    showCabinet();
-  } catch (err) {
-    registerError.textContent = err.message;
-  }
+document.addEventListener('click', () => {
+    userMenu.classList.remove('open');
 });
 
-// ===== Login =====
-loginFormEl.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  loginError.textContent = '';
 
-  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
-  const password = document.getElementById('loginPassword').value;
+// ============================================================
+// AUTH UI
+// ============================================================
 
-  try {
-    const data = await api('/api/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
-    currentUser = data.user;
-    closeModal();
-    updateAuthUI();
-  } catch (err) {
-    loginError.textContent = err.message;
-  }
-});
-
-// ===== Logout =====
-logoutBtn.addEventListener('click', async () => {
-  try {
-    await api('/api/logout', { method: 'POST' });
-  } catch (_) { /* ignore */ }
-  currentUser = null;
-  updateAuthUI();
-  showMain();
-  userMenu.classList.remove('open');
-});
-
-// ===== Auth UI State =====
 function updateAuthUI() {
-  if (currentUser) {
-    loginBtn.hidden = true;
-    userMenu.hidden = false;
-    userName.textContent = currentUser.name;
-    userAvatar.textContent = currentUser.name.charAt(0).toUpperCase();
-  } else {
-    loginBtn.hidden = false;
-    userMenu.hidden = true;
-  }
-}
+    if (currentUser) {
+        loginBtn.hidden = true;
+        userMenu.hidden = false;
 
-function setRoleBadge(el, user) {
-  el.textContent = user.role_label || user.role;
-  el.className = 'role-badge role-' + (user.role || 'member');
-}
-
-// ===== Cabinet =====
-async function showCabinet() {
-  if (!currentUser) return;
-
-  mainContent.hidden = true;
-  siteFooter.hidden = true;
-  cabinet.hidden = false;
-
-  cabinetName.textContent = currentUser.name;
-  profileName.textContent = currentUser.name;
-  profileEmail.textContent = currentUser.email;
-  setRoleBadge(profileRole, currentUser);
-  profileDate.textContent = formatDate(currentUser.created_at);
-  editName.value = currentUser.name;
-
-  activityList.innerHTML = '<li>Загрузка…</li>';
-  try {
-    const data = await api('/api/activities');
-    if (data.activities.length === 0) {
-      activityList.innerHTML = '<li>Пока нет активности</li>';
+        userName.textContent = currentUser.name;
+        userAvatar.textContent = currentUser.name
+            .charAt(0)
+            .toUpperCase();
     } else {
-      activityList.innerHTML = data.activities
-        .map(a => `<li>${a.text} — ${formatDate(a.date)}</li>`)
-        .join('');
+        loginBtn.hidden = false;
+        userMenu.hidden = true;
     }
-  } catch {
-    activityList.innerHTML = '<li>Не удалось загрузить</li>';
-  }
 
-  const canManage = currentUser.role === 'admin' || currentUser.role === 'moderator';
-  usersPanel.hidden = !canManage;
-  if (canManage) {
-    await loadUsers();
-  }
-
-  window.scrollTo({ top: 0 });
+    updateCTFPermissions();
 }
 
-async function loadUsers() {
-  usersMessage.textContent = '';
-  usersTableBody.innerHTML = '<tr><td colspan="4">Загрузка…</td></tr>';
-  try {
-    const data = await api('/api/users');
-    if (!data.users.length) {
-      usersTableBody.innerHTML = '<tr><td colspan="4">Нет пользователей</td></tr>';
-      return;
+function setRoleBadge(element, user) {
+    element.textContent = user.role_label || user.role;
+
+    element.className =
+        'role-badge role-' + (user.role || 'member');
+}
+
+
+// ============================================================
+// REGISTER
+// ============================================================
+
+registerFormEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    registerError.textContent = '';
+
+    const name = document.getElementById('regName').value.trim();
+
+    const email = document.getElementById('regEmail')
+        .value.trim().toLowerCase();
+
+    const password = document.getElementById('regPassword').value;
+    const password2 = document.getElementById('regPassword2').value;
+
+    if (password !== password2) {
+        registerError.textContent = 'Пароли не совпадают';
+        return;
     }
-    const isAdmin = currentUser.role === 'admin';
-    usersTableBody.innerHTML = data.users.map(u => {
-      const roleSelect = isAdmin
-        ? `<select data-user-id="${u.id}" class="role-select">
-            ${ROLE_OPTIONS.map(o =>
-              `<option value="${o.value}" ${u.role === o.value ? 'selected' : ''}>${o.label}</option>`
-            ).join('')}
-          </select>`
-        : `<span class="role-badge role-${u.role}">${u.role_label}</span>`;
 
-      return `<tr>
-        <td>${escapeHtml(u.name)}</td>
-        <td>${escapeHtml(u.email)}</td>
-        <td>${roleSelect}</td>
-        <td></td>
-      </tr>`;
-    }).join('');
-
-    if (isAdmin) {
-      usersTableBody.querySelectorAll('.role-select').forEach(sel => {
-        sel.addEventListener('change', async () => {
-          const userId = sel.dataset.userId;
-          const role = sel.value;
-          usersMessage.textContent = '';
-          usersMessage.className = 'form-message';
-          try {
-            await api(`/api/users/${userId}/role`, {
-              method: 'PUT',
-              body: JSON.stringify({ role }),
-            });
-            usersMessage.textContent = 'Роль обновлена';
-            usersMessage.classList.add('success');
-            if (Number(userId) === currentUser.id) {
-              const me = await api('/api/me');
-              currentUser = me.user;
-              updateAuthUI();
-              setRoleBadge(profileRole, currentUser);
-            }
-            setTimeout(() => {
-              usersMessage.textContent = '';
-              usersMessage.className = 'form-message';
-            }, 2000);
-          } catch (err) {
-            usersMessage.textContent = err.message;
-            usersMessage.classList.add('error');
-            await loadUsers();
-          }
+    try {
+        const data = await api('/api/register', {
+            method: 'POST',
+            body: JSON.stringify({
+                name,
+                email,
+                password
+            })
         });
-      });
+
+        currentUser = data.user;
+
+        closeModal();
+        updateAuthUI();
+
+        await showCabinet();
+
+    } catch (err) {
+        registerError.textContent = err.message;
     }
-  } catch (err) {
-    usersTableBody.innerHTML = `<tr><td colspan="4">${escapeHtml(err.message)}</td></tr>`;
-  }
-}
-
-function escapeHtml(str) {
-  const d = document.createElement('div');
-  d.textContent = str;
-  return d.innerHTML;
-}
-
-function showMain() {
-  cabinet.hidden = true;
-  mainContent.hidden = false;
-  siteFooter.hidden = false;
-  window.scrollTo({ top: 0 });
-}
-
-function formatDate(iso) {
-  try {
-    return new Date(iso).toLocaleDateString('ru-RU', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-  } catch {
-    return '—';
-  }
-}
-
-cabinetLink.addEventListener('click', (e) => {
-  e.preventDefault();
-  userMenu.classList.remove('open');
-  showCabinet();
 });
 
-backToSite.addEventListener('click', showMain);
-logoLink.addEventListener('click', (e) => {
-  e.preventDefault();
-  showMain();
+
+// ============================================================
+// LOGIN
+// ============================================================
+
+loginFormEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    loginError.textContent = '';
+
+    const email = document.getElementById('loginEmail')
+        .value.trim().toLowerCase();
+
+    const password = document.getElementById('loginPassword').value;
+
+    try {
+        const data = await api('/api/login', {
+            method: 'POST',
+            body: JSON.stringify({
+                email,
+                password
+            })
+        });
+
+        currentUser = data.user;
+
+        closeModal();
+        updateAuthUI();
+
+        showMain();
+
+    } catch (err) {
+        loginError.textContent = err.message;
+    }
 });
 
-// ===== Profile edit =====
-profileForm.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  profileMessage.textContent = '';
-  profileMessage.className = 'form-message';
 
-  const name = editName.value.trim();
-  if (name.length < 2) {
-    profileMessage.textContent = 'Имя слишком короткое';
-    profileMessage.classList.add('error');
-    return;
-  }
+// ============================================================
+// LOGOUT
+// ============================================================
 
-  try {
-    const data = await api('/api/profile', {
-      method: 'PUT',
-      body: JSON.stringify({ name }),
-    });
-    currentUser = data.user;
-    updateAuthUI();
-    cabinetName.textContent = currentUser.name;
-    profileName.textContent = currentUser.name;
+logoutBtn.addEventListener('click', async () => {
+    try {
+        await api('/api/logout', {
+            method: 'POST'
+        });
+    } catch (_) {
+        // Даже если запрос завершился ошибкой,
+        // локально сбрасываем состояние авторизации.
+    }
 
-    profileMessage.textContent = 'Сохранено';
-    profileMessage.classList.add('success');
-    setTimeout(() => {
-      profileMessage.textContent = '';
-      profileMessage.className = 'form-message';
-    }, 2500);
-  } catch (err) {
-    profileMessage.textContent = err.message;
-    profileMessage.classList.add('error');
-  }
-});
-
-// ===== Init =====
-async function init() {
-  try {
-    const data = await api('/api/me');
-    currentUser = data.user;
-  } catch {
     currentUser = null;
-  }
-  updateAuthUI();
-}
 
-init();
-// ============================================================
-// CTF FRONTEND
-// ============================================================
+    updateAuthUI();
+    showMain();
 
-const ctfNavLink = document.getElementById('ctfNavLink');
-const ctfModNavLink = document.getElementById('ctfModNavLink');
-
-const ctfPage = document.getElementById('ctfPage');
-const ctfModPage = document.getElementById('ctfModPage');
-
-const ctfCreatePanel = document.getElementById('ctfCreatePanel');
-const ctfCreateForm = document.getElementById('ctfCreateForm');
-
-const ctfList = document.getElementById('ctfList');
-const ctfWorkspaceEmpty = document.querySelector('.ctf-workspace-empty');
-const ctfActiveWorkspace = document.getElementById('ctfActiveWorkspace');
-
-const ctfMessages = document.getElementById('ctfMessages');
-const ctfMessageForm = document.getElementById('ctfMessageForm');
-
-let activeChallengeId = null;
-let activeSubmission = null;
-
-let activeModSubmissionId = null;
-let activeModMaxPoints = 100;
+    userMenu.classList.remove('open');
+});
 
 
 // ============================================================
@@ -523,38 +480,403 @@ function showMain() {
     mainContent.hidden = false;
     siteFooter.hidden = false;
 
-    window.scrollTo({ top: 0 });
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
 }
 
-async function showCTF() {
+function showLoginRequired() {
+    showLoginForm();
+    openModal();
+}
+
+logoLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    showMain();
+});
+
+backToSite.addEventListener('click', showMain);
+
+cabinetLink.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    userMenu.classList.remove('open');
+    showCabinet();
+});
+
+
+// ============================================================
+// CABINET
+// ============================================================
+
+async function showCabinet() {
     if (!currentUser) {
-        showLoginForm();
-        openModal();
+        showLoginRequired();
         return;
     }
 
     hideAllPages();
-    ctfPage.hidden = false;
+    cabinet.hidden = false;
 
-    ctfCreatePanel.hidden = !['admin', 'moderator'].includes(
-        currentUser.role
+    cabinetName.textContent = currentUser.name;
+    profileName.textContent = currentUser.name;
+    profileEmail.textContent = currentUser.email;
+
+    setRoleBadge(profileRole, currentUser);
+
+    profileDate.textContent = formatDate(
+        currentUser.created_at
     );
 
-    window.scrollTo({ top: 0 });
+    editName.value = currentUser.name;
+
+    activityList.innerHTML = '<li>Загрузка…</li>';
+
+    try {
+        const data = await api('/api/activities');
+
+        if (!data.activities.length) {
+            activityList.innerHTML =
+                '<li>Пока нет активности</li>';
+        } else {
+            activityList.innerHTML = data.activities.map(item => `
+                <li>
+                    ${escapeHtml(item.text)}
+                    — ${formatDateTime(item.date)}
+                </li>
+            `).join('');
+        }
+
+    } catch (err) {
+        activityList.innerHTML = `
+            <li>${escapeHtml(err.message)}</li>
+        `;
+    }
+
+    const canManage =
+        currentUser.role === 'admin' ||
+        currentUser.role === 'moderator';
+
+    usersPanel.hidden = !canManage;
+
+    if (canManage) {
+        await loadUsers();
+    }
+
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
+}
+
+
+// ============================================================
+// USERS
+// ============================================================
+
+async function loadUsers() {
+    usersMessage.textContent = '';
+
+    usersTableBody.innerHTML = `
+        <tr>
+            <td colspan="4">Загрузка…</td>
+        </tr>
+    `;
+
+    try {
+        const data = await api('/api/users');
+
+        if (!data.users.length) {
+            usersTableBody.innerHTML = `
+                <tr>
+                    <td colspan="4">Нет пользователей</td>
+                </tr>
+            `;
+            return;
+        }
+
+        const isAdmin = currentUser.role === 'admin';
+
+        usersTableBody.innerHTML = data.users.map(user => {
+            const roleControl = isAdmin
+                ? `
+                    <select
+                        data-user-id="${user.id}"
+                        class="role-select"
+                    >
+                        ${ROLE_OPTIONS.map(option => `
+                            <option
+                                value="${option.value}"
+                                ${user.role === option.value ? 'selected' : ''}
+                            >
+                                ${option.label}
+                            </option>
+                        `).join('')}
+                    </select>
+                `
+                : `
+                    <span class="role-badge role-${escapeHtml(user.role)}">
+                        ${escapeHtml(user.role_label)}
+                    </span>
+                `;
+
+            return `
+                <tr>
+                    <td>${escapeHtml(user.name)}</td>
+                    <td>${escapeHtml(user.email)}</td>
+                    <td>${roleControl}</td>
+                    <td></td>
+                </tr>
+            `;
+        }).join('');
+
+        if (isAdmin) {
+            usersTableBody.querySelectorAll('.role-select')
+                .forEach(select => {
+                    select.addEventListener('change', async () => {
+                        const userId = Number(select.dataset.userId);
+                        const role = select.value;
+
+                        setMessage(usersMessage, '');
+
+                        try {
+                            await api(`/api/users/${userId}/role`, {
+                                method: 'PUT',
+                                body: JSON.stringify({ role })
+                            });
+
+                            setMessage(
+                                usersMessage,
+                                'Роль обновлена',
+                                'success'
+                            );
+
+                            if (userId === currentUser.id) {
+                                const me = await api('/api/me');
+
+                                currentUser = me.user;
+
+                                updateAuthUI();
+
+                                setRoleBadge(
+                                    profileRole,
+                                    currentUser
+                                );
+                            }
+
+                        } catch (err) {
+                            setMessage(
+                                usersMessage,
+                                err.message,
+                                'error'
+                            );
+
+                            await loadUsers();
+                        }
+                    });
+                });
+        }
+
+    } catch (err) {
+        usersTableBody.innerHTML = `
+            <tr>
+                <td colspan="4">${escapeHtml(err.message)}</td>
+            </tr>
+        `;
+    }
+}
+
+
+// ============================================================
+// PROFILE EDIT
+// ============================================================
+
+profileForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    setMessage(profileMessage, '');
+
+    const name = editName.value.trim();
+
+    if (name.length < 2) {
+        setMessage(
+            profileMessage,
+            'Имя слишком короткое',
+            'error'
+        );
+        return;
+    }
+
+    try {
+        const data = await api('/api/profile', {
+            method: 'PUT',
+            body: JSON.stringify({ name })
+        });
+
+        currentUser = data.user;
+
+        updateAuthUI();
+
+        cabinetName.textContent = currentUser.name;
+        profileName.textContent = currentUser.name;
+
+        setMessage(
+            profileMessage,
+            'Изменения сохранены',
+            'success'
+        );
+
+    } catch (err) {
+        setMessage(
+            profileMessage,
+            err.message,
+            'error'
+        );
+    }
+});
+
+
+// ============================================================
+// CTF ELEMENTS
+// ============================================================
+
+const ctfNavLink = document.getElementById('ctfNavLink');
+const ctfModNavLink = document.getElementById('ctfModNavLink');
+
+const ctfPage = document.getElementById('ctfPage');
+const ctfModPage = document.getElementById('ctfModPage');
+
+const ctfAdminActions = document.getElementById('ctfAdminActions');
+const ctfCreateToggle = document.getElementById('ctfCreateToggle');
+const ctfCreateCard = document.getElementById('ctfCreateCard');
+const ctfCreateForm = document.getElementById('ctfCreateForm');
+
+const ctfCreateMessage = document.getElementById('ctfCreateMessage');
+const ctfCreateSubmit = document.getElementById('ctfCreateSubmit');
+
+const ctfList = document.getElementById('ctfChallengesList');
+const ctfWorkspace = document.getElementById('ctfWorkspace');
+
+const ctfMessages = document.getElementById('ctfMessages');
+const ctfMessageForm = document.getElementById('ctfMessageForm');
+
+let activeChallengeId = null;
+let activeSubmission = null;
+
+let activeModSubmissionId = null;
+let activeModMaxPoints = 100;
+
+
+// ============================================================
+// CTF PERMISSIONS
+// ============================================================
+
+function updateCTFPermissions() {
+    const isAdmin = currentUser?.role === 'admin';
+
+    const canModerate =
+        currentUser?.role === 'admin' ||
+        currentUser?.role === 'moderator';
+
+    ctfAdminActions.hidden = !isAdmin;
+    ctfModNavLink.hidden = !canModerate;
+
+    if (!isAdmin) {
+        closeCTFCreateForm();
+    }
+}
+
+
+// ============================================================
+// CTF CREATE FORM TOGGLE
+// ============================================================
+
+function openCTFCreateForm() {
+    if (!currentUser || currentUser.role !== 'admin') {
+        return;
+    }
+
+    ctfCreateCard.hidden = false;
+
+    ctfCreateToggle.textContent = '− Закрыть форму';
+    ctfCreateToggle.setAttribute('aria-expanded', 'true');
+
+    ctfCreateCard.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+    });
+}
+
+function closeCTFCreateForm() {
+    ctfCreateCard.hidden = true;
+
+    ctfCreateToggle.textContent = '+ Создать задание';
+    ctfCreateToggle.setAttribute('aria-expanded', 'false');
+}
+
+ctfCreateToggle.addEventListener('click', () => {
+    if (ctfCreateCard.hidden) {
+        openCTFCreateForm();
+    } else {
+        closeCTFCreateForm();
+    }
+});
+
+document.getElementById('ctfCreateCancel')
+    .addEventListener('click', () => {
+        closeCTFCreateForm();
+        setMessage(ctfCreateMessage, '');
+    });
+
+
+// ============================================================
+// CTF NAVIGATION
+// ============================================================
+
+async function showCTF() {
+    if (!currentUser) {
+        showLoginRequired();
+        return;
+    }
+
+    hideAllPages();
+
+    ctfPage.hidden = false;
+
+    updateCTFPermissions();
+    closeCTFCreateForm();
+
+    activeChallengeId = null;
+    activeSubmission = null;
+
+    ctfWorkspace.hidden = true;
+
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
 
     await loadCTFChallenges();
 }
 
 async function showCTFMod() {
-    if (!currentUser ||
-        !['admin', 'moderator'].includes(currentUser.role)) {
+    const canModerate =
+        currentUser &&
+        ['admin', 'moderator'].includes(currentUser.role);
+
+    if (!canModerate) {
         return;
     }
 
     hideAllPages();
+
     ctfModPage.hidden = false;
 
-    window.scrollTo({ top: 0 });
+    window.scrollTo({
+        top: 0,
+        behavior: 'smooth'
+    });
 
     await loadCTFModerationQueue();
 }
@@ -569,48 +891,24 @@ ctfModNavLink.addEventListener('click', (e) => {
     showCTFMod();
 });
 
-document.getElementById('ctfBackBtn').addEventListener(
-    'click',
-    showMain
-);
+document.getElementById('ctfBackBtn')
+    .addEventListener('click', showMain);
 
-document.getElementById('ctfModBackBtn').addEventListener(
-    'click',
-    showCTF
-);
+document.getElementById('ctfModBackBtn')
+    .addEventListener('click', showCTF);
 
-document.getElementById('ctfRefreshBtn').addEventListener(
-    'click',
-    loadCTFChallenges
-);
+document.getElementById('ctfRefreshBtn')
+    .addEventListener('click', loadCTFChallenges);
 
 
 // ============================================================
-// NAVIGATION ROLE VISIBILITY
-// ============================================================
-
-// Переопределяем отображение ссылок после авторизации.
-
-const originalUpdateAuthUI = updateAuthUI;
-
-updateAuthUI = function () {
-    originalUpdateAuthUI();
-
-    ctfNavLink.hidden = false;
-
-    ctfModNavLink.hidden = !(
-        currentUser &&
-        ['admin', 'moderator'].includes(currentUser.role)
-    );
-};
-
-
-// ============================================================
-// CTF CHALLENGES
+// LOAD CTF CHALLENGES
 // ============================================================
 
 async function loadCTFChallenges() {
-    ctfList.innerHTML = '<p class="ctf-empty">Загрузка заданий...</p>';
+    ctfList.innerHTML = `
+        <p class="ctf-empty">Загрузка заданий...</p>
+    `;
 
     try {
         const data = await api('/api/ctf');
@@ -639,7 +937,9 @@ async function loadCTFChallenges() {
 
             return `
                 <button
-                    class="ctf-item ${activeChallengeId === challenge.id ? 'active' : ''}"
+                    class="ctf-item ${
+                        activeChallengeId === challenge.id ? 'active' : ''
+                    }"
                     data-id="${challenge.id}"
                     type="button"
                 >
@@ -680,14 +980,13 @@ async function loadCTFChallenges() {
 
 
 // ============================================================
-// OPEN CHALLENGE
+// OPEN CTF CHALLENGE
 // ============================================================
 
 async function openCTFChallenge(challengeId) {
     activeChallengeId = challengeId;
 
-    ctfWorkspaceEmpty.hidden = true;
-    ctfActiveWorkspace.hidden = false;
+    ctfWorkspace.hidden = false;
 
     ctfMessages.innerHTML = `
         <p class="ctf-empty">Загрузка переписки...</p>
@@ -705,19 +1004,21 @@ async function openCTFChallenge(challengeId) {
             `/api/ctf/${challengeId}/submission`
         );
 
+        if (activeChallengeId !== challengeId) return;
+
         activeSubmission = data.submission;
 
-        document.getElementById('ctfActiveTitle').textContent =
+        document.getElementById('ctfTaskTitle').textContent =
             data.challenge.title;
 
-        document.getElementById('ctfActiveDescription').textContent =
+        document.getElementById('ctfTaskDescription').textContent =
             data.challenge.description;
 
-        document.getElementById('ctfActiveDifficulty').textContent =
-            data.challenge.difficulty;
+        document.getElementById('ctfTaskDifficulty').textContent =
+            `Сложность: ${data.challenge.difficulty}`;
 
-        document.getElementById('ctfActivePoints').textContent =
-            `${data.challenge.max_points} баллов`;
+        document.getElementById('ctfTaskPoints').textContent =
+            `Баллы: ${data.challenge.max_points}`;
 
         const statusLabels = {
             in_progress: 'В процессе',
@@ -725,9 +1026,7 @@ async function openCTFChallenge(challengeId) {
             graded: 'Проверено'
         };
 
-        const statusElement = document.getElementById(
-            'ctfActiveStatus'
-        );
+        const statusElement = document.getElementById('ctfTaskStatus');
 
         statusElement.textContent =
             statusLabels[activeSubmission.status] || 'Неизвестно';
@@ -736,14 +1035,14 @@ async function openCTFChallenge(challengeId) {
 
         renderCTFMessages(data.messages);
 
-        const locked = activeSubmission.status === 'graded' ||
-            activeSubmission.status === 'pending';
+        const locked = ['graded', 'pending'].includes(
+            activeSubmission.status
+        );
 
         document.getElementById('ctfMessageInput').disabled = locked;
-        document.getElementById('ctfSubmitSolutionBtn').disabled = locked;
+        document.getElementById('ctfSubmitBtn').disabled = locked;
 
-        document.getElementById('ctfMessageForm')
-            .querySelector('button[type="submit"]').disabled = locked;
+        document.getElementById('ctfSendMessageBtn').disabled = locked;
 
         const feedback = document.getElementById('ctfFeedback');
 
@@ -751,22 +1050,25 @@ async function openCTFChallenge(challengeId) {
 
         if (!feedback.hidden) {
             document.getElementById('ctfFeedbackScore').textContent =
-                `${activeSubmission.score} баллов`;
+                `${activeSubmission.score} / ${data.challenge.max_points}`;
 
             document.getElementById('ctfFeedbackText').textContent =
-                activeSubmission.feedback || 'Комментарий отсутствует.';
+                activeSubmission.feedback ||
+                'Комментарий отсутствует.';
         }
 
     } catch (err) {
         ctfMessages.innerHTML = `
-            <p class="ctf-empty">${escapeHtml(err.message)}</p>
+            <p class="ctf-empty">
+                ${escapeHtml(err.message)}
+            </p>
         `;
     }
 }
 
 
 // ============================================================
-// RENDER CHAT
+// RENDER CTF CHAT
 // ============================================================
 
 function renderCTFMessages(messages) {
@@ -781,10 +1083,12 @@ function renderCTFMessages(messages) {
     }
 
     ctfMessages.innerHTML = messages.map(message => {
-        const mine = Number(message.sender_id) === currentUser.id;
+        const mine =
+            Number(message.sender_id) === currentUser.id;
 
         return `
             <div class="ctf-message ${mine ? 'mine' : 'other'}">
+
                 <div class="ctf-message-author">
                     ${escapeHtml(message.sender_name)}
                 </div>
@@ -794,8 +1098,9 @@ function renderCTFMessages(messages) {
                 </div>
 
                 <div class="ctf-message-date">
-                    ${new Date(message.created_at).toLocaleString('ru-RU')}
+                    ${formatDateTime(message.created_at)}
                 </div>
+
             </div>
         `;
     }).join('');
@@ -805,23 +1110,33 @@ function renderCTFMessages(messages) {
 
 
 // ============================================================
-// SEND USER MESSAGE
+// SEND CTF MESSAGE
 // ============================================================
 
 async function sendCTFMessage(submit = false) {
-    if (!activeChallengeId) return;
+    if (!activeChallengeId || !activeSubmission) {
+        return;
+    }
 
     const input = document.getElementById('ctfMessageInput');
     const message = input.value.trim();
 
+    const locked = ['graded', 'pending'].includes(
+        activeSubmission.status
+    );
+
+    if (locked) return;
+
     if (!message) {
-        document.getElementById('ctfChatMessage').textContent =
-            'Введите сообщение или решение.';
+        alert('Введите сообщение или решение.');
         return;
     }
 
-    const button = document.getElementById('ctfSubmitSolutionBtn');
-    button.disabled = true;
+    const sendButton = document.getElementById('ctfSendMessageBtn');
+    const submitButton = document.getElementById('ctfSubmitBtn');
+
+    sendButton.disabled = true;
+    submitButton.disabled = true;
 
     try {
         await api(`/api/ctf/${activeChallengeId}/messages`, {
@@ -834,19 +1149,15 @@ async function sendCTFMessage(submit = false) {
 
         input.value = '';
 
-        document.getElementById('ctfChatMessage').textContent =
-            submit
-                ? 'Решение отправлено на проверку.'
-                : 'Сообщение отправлено.';
-
         await openCTFChallenge(activeChallengeId);
         await loadCTFChallenges();
 
     } catch (err) {
-        document.getElementById('ctfChatMessage').textContent =
-            err.message;
+        alert(err.message);
+
     } finally {
-        button.disabled = false;
+        sendButton.disabled = false;
+        submitButton.disabled = false;
     }
 }
 
@@ -855,7 +1166,7 @@ ctfMessageForm.addEventListener('submit', async (e) => {
     await sendCTFMessage(false);
 });
 
-document.getElementById('ctfSubmitSolutionBtn')
+document.getElementById('ctfSubmitBtn')
     .addEventListener('click', async () => {
         const confirmed = confirm(
             'Отправить решение модераторам на проверку?'
@@ -868,55 +1179,121 @@ document.getElementById('ctfSubmitSolutionBtn')
 
 
 // ============================================================
-// CREATE CHALLENGE
+// CREATE CTF CHALLENGE
 // ============================================================
 
 ctfCreateForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const message = document.getElementById(
-        'ctfCreateMessage'
+    if (!currentUser || currentUser.role !== 'admin') {
+        setMessage(
+            ctfCreateMessage,
+            'Недостаточно прав для создания задания.',
+            'error'
+        );
+        return;
+    }
+
+    const title = document.getElementById('ctfCreateTitle')
+        .value.trim();
+
+    const description = document.getElementById('ctfCreateDescription')
+        .value.trim();
+
+    const difficulty = document.getElementById('ctfCreateDifficulty')
+        .value;
+
+    const maxPoints = Number(
+        document.getElementById('ctfCreatePoints').value
     );
 
-    message.textContent = '';
+    if (!title || !description) {
+        setMessage(
+            ctfCreateMessage,
+            'Заполните название и описание.',
+            'error'
+        );
+        return;
+    }
 
-    const payload = {
-        title: document.getElementById('ctfTitle').value.trim(),
-        description: document.getElementById('ctfDescription').value.trim(),
-        difficulty: document.getElementById('ctfDifficulty').value,
-        max_points: Number(
-            document.getElementById('ctfPoints').value
-        )
-    };
+    if (
+        !Number.isInteger(maxPoints) ||
+        maxPoints < 1 ||
+        maxPoints > 100000
+    ) {
+        setMessage(
+            ctfCreateMessage,
+            'Количество баллов должно быть от 1 до 100000.',
+            'error'
+        );
+        return;
+    }
+
+    ctfCreateSubmit.disabled = true;
+    ctfCreateSubmit.textContent = 'Публикация...';
+
+    setMessage(ctfCreateMessage, '');
 
     try {
-        await api('/api/ctf', {
+        const data = await api('/api/ctf', {
             method: 'POST',
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                title,
+                description,
+                difficulty,
+                max_points: maxPoints
+            })
         });
 
-        message.textContent = 'CTF успешно опубликован.';
-        message.className = 'form-message success';
+        setMessage(
+            ctfCreateMessage,
+            data.message || 'CTF успешно опубликован.',
+            'success'
+        );
 
         ctfCreateForm.reset();
 
+        document.getElementById('ctfCreateDifficulty').value =
+            'Средняя';
+
+        document.getElementById('ctfCreatePoints').value = 100;
+
         await loadCTFChallenges();
 
+        setTimeout(() => {
+            closeCTFCreateForm();
+            setMessage(ctfCreateMessage, '');
+        }, 1500);
+
     } catch (err) {
-        message.textContent = err.message;
-        message.className = 'form-message error';
+        setMessage(
+            ctfCreateMessage,
+            err.message,
+            'error'
+        );
+
+    } finally {
+        ctfCreateSubmit.disabled = false;
+        ctfCreateSubmit.textContent = 'Опубликовать задание';
     }
 });
 
 
 // ============================================================
-// MODERATION QUEUE
+// MODERATION ELEMENTS
 // ============================================================
 
-const ctfModList = document.getElementById('ctfModList');
+const ctfModList = document.getElementById('ctfModSubmissions');
+
+
+// ============================================================
+// LOAD MODERATION QUEUE
+// ============================================================
 
 async function loadCTFModerationQueue() {
-    const status = document.getElementById('ctfModFilter').value;
+    const status = document.getElementById(
+        'ctfModStatusFilter'
+    ).value;
 
     ctfModList.innerHTML = `
         <p class="ctf-empty">Загрузка...</p>
@@ -943,40 +1320,45 @@ async function loadCTFModerationQueue() {
         ctfModList.innerHTML = data.submissions.map(item => `
             <button
                 type="button"
-                class="ctf-mod-item ${activeModSubmissionId === item.id ? 'active' : ''}"
+                class="ctf-mod-item ${
+                    activeModSubmissionId === item.id ? 'active' : ''
+                }"
                 data-id="${item.id}"
             >
                 <span class="ctf-mod-item-status">
                     ${escapeHtml(item.status)}
                 </span>
 
-                <strong>${escapeHtml(item.challenge_title)}</strong>
+                <strong>
+                    ${escapeHtml(item.challenge_title)}
+                </strong>
 
                 <span>${escapeHtml(item.username)}</span>
 
                 <small>
-                    ${new Date(item.updated_at).toLocaleDateString('ru-RU')}
+                    ${formatDate(item.updated_at)}
                 </small>
             </button>
         `).join('');
 
-        ctfModList.querySelectorAll('.ctf-mod-item').forEach(item => {
-            item.addEventListener('click', () => {
-                openCTFModeration(Number(item.dataset.id));
+        ctfModList.querySelectorAll('.ctf-mod-item')
+            .forEach(item => {
+                item.addEventListener('click', () => {
+                    openCTFModeration(Number(item.dataset.id));
+                });
             });
-        });
 
     } catch (err) {
         ctfModList.innerHTML = `
-            <p class="ctf-empty">${escapeHtml(err.message)}</p>
+            <p class="ctf-empty">
+                ${escapeHtml(err.message)}
+            </p>
         `;
     }
 }
 
-document.getElementById('ctfModFilter').addEventListener(
-    'change',
-    loadCTFModerationQueue
-);
+document.getElementById('ctfModStatusFilter')
+    .addEventListener('change', loadCTFModerationQueue);
 
 
 // ============================================================
@@ -993,39 +1375,49 @@ async function openCTFModeration(submissionId) {
         );
     });
 
-    document.getElementById('ctfModEmpty').hidden = true;
-    document.getElementById('ctfModActive').hidden = false;
+    const workspace = document.getElementById('ctfModWorkspace');
+
+    workspace.hidden = false;
+
+    document.getElementById('ctfModMessages').innerHTML = `
+        <p class="ctf-empty">Загрузка переписки...</p>
+    `;
 
     try {
         const data = await api(
             `/api/mod/ctf/submissions/${submissionId}`
         );
 
+        if (activeModSubmissionId !== submissionId) return;
+
         const submission = data.submission;
         const challenge = data.challenge;
 
+        if (!challenge) {
+            throw new Error('Задание не найдено.');
+        }
+
         activeModMaxPoints = challenge.max_points;
 
-        document.getElementById('ctfModTitle').textContent =
+        document.getElementById('ctfModSubmissionTitle').textContent =
             challenge.title;
 
-        document.getElementById('ctfModUser').textContent =
-            `Участник: ${submission.username}`;
+        document.getElementById('ctfModUsername').textContent =
+            submission.username;
 
-        document.getElementById('ctfModDescription').textContent =
-            challenge.description;
+        document.getElementById('ctfModChallengeTitle').textContent =
+            challenge.title;
 
-        document.getElementById('ctfModStatus').textContent =
+        document.getElementById('ctfModSubmissionDate').textContent =
+            formatDateTime(submission.updated_at);
+
+        document.getElementById('ctfModSubmissionStatus').textContent =
             submission.status;
 
-        document.getElementById('ctfGradeScore').max =
-            challenge.max_points;
+        const scoreInput = document.getElementById('ctfGradeScore');
 
-        document.getElementById('ctfGradeScore').value =
-            submission.score;
-
-        document.getElementById('ctfGradeMax').textContent =
-            `Максимум: ${challenge.max_points}`;
+        scoreInput.max = challenge.max_points;
+        scoreInput.value = submission.score;
 
         document.getElementById('ctfGradeFeedback').value =
             submission.feedback || '';
@@ -1033,19 +1425,21 @@ async function openCTFModeration(submissionId) {
         renderCTFModerationMessages(data.messages);
 
     } catch (err) {
-        alert(err.message);
+        document.getElementById('ctfModMessages').innerHTML = `
+            <p class="ctf-empty">
+                ${escapeHtml(err.message)}
+            </p>
+        `;
     }
 }
 
 
 // ============================================================
-// MODERATION CHAT
+// RENDER MODERATION CHAT
 // ============================================================
 
 function renderCTFModerationMessages(messages) {
-    const container = document.getElementById(
-        'ctfModMessages'
-    );
+    const container = document.getElementById('ctfModMessages');
 
     if (!messages.length) {
         container.innerHTML = `
@@ -1055,10 +1449,12 @@ function renderCTFModerationMessages(messages) {
     }
 
     container.innerHTML = messages.map(message => {
-        const mine = Number(message.sender_id) === currentUser.id;
+        const mine =
+            Number(message.sender_id) === currentUser.id;
 
         return `
             <div class="ctf-message ${mine ? 'mine' : 'other'}">
+
                 <div class="ctf-message-author">
                     ${escapeHtml(message.sender_name)}
                 </div>
@@ -1068,8 +1464,9 @@ function renderCTFModerationMessages(messages) {
                 </div>
 
                 <div class="ctf-message-date">
-                    ${new Date(message.created_at).toLocaleString('ru-RU')}
+                    ${formatDateTime(message.created_at)}
                 </div>
+
             </div>
         `;
     }).join('');
@@ -1077,6 +1474,10 @@ function renderCTFModerationMessages(messages) {
     container.scrollTop = container.scrollHeight;
 }
 
+
+// ============================================================
+// MODERATOR SEND MESSAGE
+// ============================================================
 
 document.getElementById('ctfModMessageForm')
     .addEventListener('submit', async (e) => {
@@ -1088,16 +1489,18 @@ document.getElementById('ctfModMessageForm')
             'ctfModMessageInput'
         );
 
-        const text = input.value.trim();
+        const message = input.value.trim();
 
-        if (!text) return;
+        if (!message) return;
 
         try {
             await api(
                 `/api/mod/ctf/submissions/${activeModSubmissionId}/messages`,
                 {
                     method: 'POST',
-                    body: JSON.stringify({ text })
+                    body: JSON.stringify({
+                        text: message
+                    })
                 }
             );
 
@@ -1138,8 +1541,11 @@ document.getElementById('ctfGradeForm')
             score < 0 ||
             score > activeModMaxPoints
         ) {
-            message.textContent = 'Некорректное количество баллов.';
-            message.className = 'form-message error';
+            setMessage(
+                message,
+                `Баллы должны быть от 0 до ${activeModMaxPoints}.`,
+                'error'
+            );
             return;
         }
 
@@ -1155,17 +1561,72 @@ document.getElementById('ctfGradeForm')
                 }
             );
 
-            message.textContent = 'Оценка успешно сохранена.';
-            message.className = 'form-message success';
+            setMessage(
+                message,
+                'Оценка успешно сохранена.',
+                'success'
+            );
 
             await loadCTFModerationQueue();
             await openCTFModeration(activeModSubmissionId);
 
         } catch (err) {
-            message.textContent = err.message;
-            message.className = 'form-message error';
+            setMessage(
+                message,
+                err.message,
+                'error'
+            );
         }
     });
-const ctfAdminActions = document.getElementById('ctfAdminActions');
-const ctfCreateToggle = document.getElementById('ctfCreateToggle');
-const ctfCreateCard = document.getElementById('ctfCreateCard');
+
+
+// ============================================================
+// SMOOTH ANCHORS
+// ============================================================
+
+document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    anchor.addEventListener('click', function (e) {
+        const targetId = this.getAttribute('href');
+
+        if (
+            targetId === '#' ||
+            targetId === '#cabinet' ||
+            targetId === '#ctf'
+        ) {
+            return;
+        }
+
+        const target = document.querySelector(targetId);
+
+        if (target && !target.hidden) {
+            e.preventDefault();
+
+            const top =
+                target.getBoundingClientRect().top +
+                window.scrollY - 80;
+
+            window.scrollTo({
+                top,
+                behavior: 'smooth'
+            });
+        }
+    });
+});
+
+
+// ============================================================
+// INITIALIZATION
+// ============================================================
+
+async function init() {
+    try {
+        const data = await api('/api/me');
+        currentUser = data.user;
+    } catch {
+        currentUser = null;
+    }
+
+    updateAuthUI();
+}
+
+init();
