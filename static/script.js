@@ -981,50 +981,151 @@ async function loadCTFLeaderboard() {
 
         if (!leaderboard.length) {
             ctfLeaderboardContent.innerHTML = `
-                <p class="ctf-empty">
-                    Пока никто не набрал баллы.
-                </p>
+                <div class="leaderboard-empty">
+                    <span class="leaderboard-empty-number">00</span>
+                    <h3>Пока нет участников</h3>
+                    <p>Здесь появятся исследователи, набравшие первые баллы.</p>
+                </div>
             `;
             return;
         }
 
+        const getPoints = user => Number(user.points) || 0;
+        const getCompleted = user => Number(user.completed) || 0;
+        const isCurrentUser = user =>
+            currentUser &&
+            user.id !== undefined &&
+            Number(user.id) === Number(currentUser.id);
+
+        const topThree = leaderboard.slice(0, 3);
+        const remaining = leaderboard.slice(3);
+
+        const podiumOrder = [
+            topThree[1],
+            topThree[0],
+            topThree[2]
+        ].filter(Boolean);
+
+        const podium = podiumOrder.map(user => {
+            const rank = Number(user.rank) || 0;
+            const isFirst = rank === 1;
+
+            return `
+                <article class="leaderboard-podium-card rank-${rank}
+                    ${isCurrentUser(user) ? 'is-current-user' : ''}">
+
+                    <div class="leaderboard-podium-top">
+                        <span class="leaderboard-rank">
+                            ${String(rank).padStart(2, '0')}
+                        </span>
+
+                        ${isFirst
+                            ? '<span class="leaderboard-winner-label">ЛИДЕР</span>'
+                            : ''}
+                    </div>
+
+                    <div class="leaderboard-podium-user">
+                        <div class="leaderboard-avatar">
+                            ${escapeHtml(
+                                String(user.name || '?')
+                                    .charAt(0)
+                                    .toUpperCase()
+                            )}
+                        </div>
+
+                        <h3>${escapeHtml(user.name || 'Неизвестный')}</h3>
+
+                        ${isCurrentUser(user)
+                            ? '<span class="leaderboard-you-label">ЭТО ВЫ</span>'
+                            : ''}
+                    </div>
+
+                    <div class="leaderboard-podium-score">
+                        <strong>${getPoints(user).toLocaleString('ru-RU')}</strong>
+                        <span>БАЛЛОВ</span>
+                    </div>
+
+                    <div class="leaderboard-podium-footer">
+                        <span>Решено заданий</span>
+                        <strong>${getCompleted(user)}</strong>
+                    </div>
+                </article>
+            `;
+        }).join('');
+
+        const rows = remaining.map(user => {
+            const rank = Number(user.rank) || '—';
+
+            return `
+                <div class="leaderboard-row
+                    ${isCurrentUser(user) ? 'is-current-user' : ''}">
+
+                    <div class="leaderboard-row-rank">
+                        ${String(rank).padStart(2, '0')}
+                    </div>
+
+                    <div class="leaderboard-row-user">
+                        <div class="leaderboard-row-avatar">
+                            ${escapeHtml(
+                                String(user.name || '?')
+                                    .charAt(0)
+                                    .toUpperCase()
+                            )}
+                        </div>
+
+                        <div>
+                            <strong>${escapeHtml(user.name || 'Неизвестный')}</strong>
+
+                            ${isCurrentUser(user)
+                                ? '<span class="leaderboard-you-label">ЭТО ВЫ</span>'
+                                : ''}
+                        </div>
+                    </div>
+
+                    <div class="leaderboard-row-completed">
+                        <strong>${getCompleted(user)}</strong>
+                        <span>заданий</span>
+                    </div>
+
+                    <div class="leaderboard-row-points">
+                        <strong>${getPoints(user).toLocaleString('ru-RU')}</strong>
+                        <span>баллов</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
         ctfLeaderboardContent.innerHTML = `
-            <div class="ctf-leaderboard-table-wrap">
-                <table class="ctf-leaderboard-table">
-                    <thead>
-                        <tr>
-                            <th>Место</th>
-                            <th>Участник</th>
-                            <th>Баллы</th>
-                            <th>Решено заданий</th>
-                        </tr>
-                    </thead>
+            <div class="leaderboard-overview">
+                <div>
+                    <span class="leaderboard-overview-label">
+                        ОБЩИЙ РЕЙТИНГ
+                    </span>
+                    <h2>Исследователи</h2>
+                </div>
 
-                    <tbody>
-                        ${leaderboard.map(user => `
-                            <tr>
-                                <td>
-                                    <strong>#${Number(user.rank) || '—'}</strong>
-                                </td>
-
-                                <td>
-                                    ${escapeHtml(user.name)}
-                                </td>
-
-                                <td>
-                                    <strong>
-                                        ${Number(user.points) || 0}
-                                    </strong>
-                                </td>
-
-                                <td>
-                                    ${Number(user.completed) || 0}
-                                </td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                </table>
+                <div class="leaderboard-participant-count">
+                    <strong>${leaderboard.length}</strong>
+                    <span>участников</span>
+                </div>
             </div>
+
+            <div class="leaderboard-podium">
+                ${podium}
+            </div>
+
+            ${remaining.length ? `
+                <div class="leaderboard-list">
+                    <div class="leaderboard-list-header">
+                        <span>ПОЗИЦИЯ / УЧАСТНИК</span>
+                        <span>РЕЗУЛЬТАТ</span>
+                    </div>
+
+                    <div class="leaderboard-list-content">
+                        ${rows}
+                    </div>
+                </div>
+            ` : ''}
         `;
 
     } catch (err) {

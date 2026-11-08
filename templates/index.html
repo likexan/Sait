@@ -6,13 +6,15 @@
     <meta name="theme-color" content="#0a0a0a">
     <title>blind — OSINT Platform</title>
     <meta name="description" content="blind — платформа для OSINT-исследований, цифровых расследований и CTF.">
+
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        /* ARTICLES */
+        /* ================= ARTICLES ================= */
+
         .articles-page {
             min-height: 75vh;
             padding: 100px 6% 70px;
@@ -191,6 +193,22 @@
             margin: 20px 0;
         }
 
+        .article-content a {
+            text-decoration: underline;
+        }
+
+        .article-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+
+        .article-content td,
+        .article-content th {
+            border: 1px solid var(--border-color, rgba(128,128,128,.3));
+            padding: 10px;
+        }
+
         .article-admin-bar {
             display: flex;
             gap: 10px;
@@ -297,6 +315,31 @@
 
         .article-file-label input {
             display: none;
+        }
+
+        .article-preview-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+        }
+
+        .article-preview-remove {
+            border: 1px solid rgba(128,128,128,.3);
+            background: transparent;
+            color: inherit;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+        }
+
+        .article-preview-remove:hover {
+            background: rgba(128,128,128,.12);
+        }
+
+        .article-editor-message {
+            margin-top: 15px;
         }
 
         @media (max-width: 700px) {
@@ -826,9 +869,18 @@
                     <label for="articlePreviewInput">Превью статьи</label>
                     <input type="file" id="articlePreviewInput"
                         accept="image/png,image/jpeg,image/webp,image/gif">
+
                     <div id="articlePreviewStatus"></div>
+
                     <img id="articlePreviewLocal" alt="Предпросмотр"
                         style="display:none;max-width:100%;max-height:220px;margin-top:12px;border-radius:8px;">
+
+                    <div class="article-preview-actions">
+                        <button type="button" class="article-preview-remove"
+                            id="articleRemovePreviewBtn" hidden>
+                            Удалить превью
+                        </button>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -843,23 +895,26 @@
                         <button type="button" data-command="fontSize" data-value="5" title="Увеличить текст">A+</button>
                         <button type="button" data-command="insertOrderedList" title="Нумерованный список">1.</button>
                         <button type="button" data-command="insertUnorderedList" title="Маркированный список">•</button>
-                        <button type="button" data-command="formatBlock" data-value="h2">H2</button>
-                        <button type="button" data-command="formatBlock" data-value="h3">H3</button>
-                        <button type="button" data-command="formatBlock" data-value="blockquote">Цитата</button>
+                        <button type="button" data-command="formatBlock" data-value="h2" title="Заголовок">H2</button>
+                        <button type="button" data-command="formatBlock" data-value="h3" title="Подзаголовок">H3</button>
+                        <button type="button" data-command="formatBlock" data-value="blockquote" title="Цитата">Цитата</button>
 
                         <label class="article-file-label">
                             Изображение
-                            <input type="file" id="articleImageInput" accept="image/*">
+                            <input type="file" id="articleImageInput"
+                                accept="image/png,image/jpeg,image/webp,image/gif">
                         </label>
 
                         <label class="article-file-label">
                             Видео
-                            <input type="file" id="articleVideoInput" accept="video/mp4,video/webm">
+                            <input type="file" id="articleVideoInput"
+                                accept="video/mp4,video/webm">
                         </label>
 
                         <label class="article-file-label">
                             Аудио
-                            <input type="file" id="articleAudioInput" accept="audio/*">
+                            <input type="file" id="articleAudioInput"
+                                accept="audio/mpeg,audio/mp3,audio/wav,audio/ogg">
                         </label>
                     </div>
 
@@ -878,7 +933,8 @@
                     </button>
                 </div>
 
-                <p class="form-message" id="articleEditorMessage"></p>
+                <p class="form-message article-editor-message"
+                    id="articleEditorMessage"></p>
             </form>
         </div>
 
@@ -1120,6 +1176,8 @@
    ============================================================ */
 
 (() => {
+    "use strict";
+
     const $ = id => document.getElementById(id);
 
     const nav = $("articlesNavLink");
@@ -1135,50 +1193,25 @@
     let currentArticle = null;
     let editingArticleId = null;
     let uploadedPreview = null;
+    let removeExistingPreview = false;
+    let savedSelection = null;
+    let previewObjectUrl = null;
 
-    function showArticles() {
-        main.hidden = true;
-        cabinet.hidden = true;
-        ctf.hidden = true;
-        mod.hidden = true;
-        leaderboard.hidden = true;
-        page.hidden = false;
-        footer.hidden = true;
+    /*
+     * Интеграция с общей навигацией.
+     * Когда script.js вызывает hideAllPages(), раздел статей
+     * также будет скрываться.
+     */
+    if (typeof window.hideAllPages === "function") {
+        const originalHideAllPages = window.hideAllPages;
 
-        $("articlesListView").classList.remove("article-hidden");
-        $("articleReader").classList.add("article-hidden");
-        $("articleEditor").classList.add("article-hidden");
-
-        loadArticles();
-        window.scrollTo(0, 0);
+        window.hideAllPages = function () {
+            originalHideAllPages();
+            page.hidden = true;
+        };
     }
 
-    function showMainPage() {
-        page.hidden = true;
-        footer.hidden = false;
-        main.hidden = false;
-        window.scrollTo(0, 0);
-    }
-
-    async function getCurrentUser() {
-        try {
-            const response = await fetch("/api/me");
-            const data = await response.json();
-            currentUser = data.user;
-            updateArticlePermissions();
-        } catch (error) {
-            currentUser = null;
-        }
-    }
-
-    function canEdit() {
-        return currentUser &&
-            ["admin", "moderator"].includes(currentUser.role);
-    }
-
-    function updateArticlePermissions() {
-        $("articleAdminBar").hidden = !canEdit();
-    }
+    /* ================= HELPERS ================= */
 
     function escapeHTML(value) {
         return String(value ?? "").replace(/[&<>"']/g, char => ({
@@ -1192,53 +1225,441 @@
 
     function formatDate(value) {
         if (!value) return "";
+
         const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return "";
+
+        if (Number.isNaN(date.getTime())) {
+            return "";
+        }
+
         return date.toLocaleDateString("ru-RU");
     }
 
-    async function loadArticles() {
-        const grid = $("articlesGrid");
-        grid.innerHTML = '<div class="article-empty">Загрузка статей...</div>';
+    function setEditorMessage(message, type = "") {
+        const element = $("articleEditorMessage");
+
+        element.textContent = message;
+        element.className = "form-message article-editor-message";
+
+        if (type) {
+            element.classList.add(type);
+        }
+    }
+
+    async function parseResponse(response, defaultMessage) {
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            throw new Error(data.error || defaultMessage);
+        }
+
+        return data;
+    }
+
+    function safeMediaUrl(value) {
+        if (typeof value !== "string") {
+            return null;
+        }
+
+        const url = value.trim();
+
+        if (!url) {
+            return null;
+        }
+
+        if (
+            url.startsWith("/") &&
+            !url.startsWith("//") &&
+            !url.includes("\\")
+        ) {
+            return url;
+        }
 
         try {
-            const response = await fetch("/api/articles");
-            const data = await response.json();
+            const parsed = new URL(url, window.location.origin);
 
-            if (!response.ok) {
-                throw new Error(data.error || "Не удалось загрузить статьи");
+            if (
+                parsed.protocol === "https:" &&
+                parsed.origin !== "null"
+            ) {
+                return parsed.href;
+            }
+        } catch (_) {
+            return null;
+        }
+
+        return null;
+    }
+
+    /*
+     * Клиентская очистка HTML.
+     * Серверная очистка всё равно обязательна.
+     */
+    function sanitizeArticleHTML(html) {
+        const parser = new DOMParser();
+        const documentFragment = parser.parseFromString(
+            String(html || ""),
+            "text/html"
+        );
+
+        const allowedTags = new Set([
+            "P", "BR",
+            "STRONG", "B",
+            "EM", "I",
+            "U", "S",
+            "CODE", "PRE",
+            "OL", "UL", "LI",
+            "H2", "H3",
+            "BLOCKQUOTE",
+            "A",
+            "IMG",
+            "VIDEO",
+            "AUDIO",
+            "SOURCE",
+            "SPAN",
+            "DIV"
+        ]);
+
+        const allowedAttributes = {
+            "A": ["href", "target", "rel"],
+            "IMG": ["src", "alt", "title", "width", "height"],
+            "VIDEO": ["src", "controls", "preload", "width", "height"],
+            "AUDIO": ["src", "controls", "preload"],
+            "SOURCE": ["src", "type"],
+            "SPAN": ["style"],
+            "DIV": ["style"]
+        };
+
+        function cleanNode(node) {
+            if (node.nodeType === Node.TEXT_NODE) {
+                return document.createTextNode(node.textContent);
             }
 
-            const articles = data.articles || [];
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+                return document.createDocumentFragment();
+            }
+
+            const tag = node.tagName;
+
+            if (!allowedTags.has(tag)) {
+                const fragment = document.createDocumentFragment();
+
+                if (![
+                    "SCRIPT", "STYLE", "IFRAME",
+                    "OBJECT", "EMBED", "SVG",
+                    "FORM", "INPUT"
+                ].includes(tag)) {
+                    [...node.childNodes].forEach(child => {
+                        fragment.appendChild(cleanNode(child));
+                    });
+                }
+
+                return fragment;
+            }
+
+            const element = document.createElement(tag.toLowerCase());
+
+            const allowed = allowedAttributes[tag] || [];
+
+            allowed.forEach(attribute => {
+                if (!node.hasAttribute(attribute)) {
+                    return;
+                }
+
+                const value = node.getAttribute(attribute);
+
+                if (attribute === "href") {
+                    try {
+                        const parsed = new URL(value, window.location.origin);
+
+                        if (
+                            parsed.protocol === "https:" ||
+                            (
+                                parsed.origin === window.location.origin &&
+                                value.startsWith("/") &&
+                                !value.startsWith("//")
+                            )
+                        ) {
+                            element.setAttribute("href", parsed.href);
+                            element.setAttribute("rel", "noopener noreferrer");
+                        }
+                    } catch (_) {}
+                    return;
+                }
+
+                if (attribute === "src") {
+                    const safe = safeMediaUrl(value);
+
+                    if (safe) {
+                        element.setAttribute("src", safe);
+                    }
+
+                    return;
+                }
+
+                if (attribute === "style") {
+                    /*
+                     * Разрешаем только безопасное управление размером текста.
+                     */
+                    const style = value
+                        .split(";")
+                        .map(part => part.trim())
+                        .filter(part =>
+                            /^font-size\s*:\s*(small|medium|large|[0-9.]+(px|em|rem|%))$/i.test(part) ||
+                            /^text-align\s*:\s*(left|right|center|justify)$/i.test(part)
+                        )
+                        .join("; ");
+
+                    if (style) {
+                        element.setAttribute("style", style);
+                    }
+
+                    return;
+                }
+
+                if (["controls", "preload"].includes(attribute)) {
+                    if (attribute === "controls") {
+                        element.setAttribute("controls", "");
+                    } else if (["none", "metadata", "auto"].includes(value)) {
+                        element.setAttribute(attribute, value);
+                    }
+
+                    return;
+                }
+
+                if (["width", "height"].includes(attribute)) {
+                    const number = Number(value);
+
+                    if (
+                        Number.isInteger(number) &&
+                        number > 0 &&
+                        number <= 3000
+                    ) {
+                        element.setAttribute(attribute, String(number));
+                    }
+
+                    return;
+                }
+
+                if (attribute === "target") {
+                    if (value === "_blank" || value === "_self") {
+                        element.setAttribute(attribute, value);
+                    }
+
+                    return;
+                }
+
+                if (attribute === "type") {
+                    if (/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(value)) {
+                        element.setAttribute(attribute, value);
+                    }
+
+                    return;
+                }
+
+                if (attribute === "alt" || attribute === "title") {
+                    element.setAttribute(attribute, value.slice(0, 500));
+                }
+            });
+
+            [...node.childNodes].forEach(child => {
+                element.appendChild(cleanNode(child));
+            });
+
+            return element;
+        }
+
+        const result = document.createDocumentFragment();
+
+        [...documentFragment.body.childNodes].forEach(node => {
+            result.appendChild(cleanNode(node));
+        });
+
+        const container = document.createElement("div");
+        container.appendChild(result);
+
+        return container.innerHTML;
+    }
+
+    /* ================= AUTH ================= */
+
+    async function getCurrentUser() {
+        try {
+            const response = await fetch("/api/me", {
+                credentials: "same-origin",
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+
+            if (!response.ok) {
+                currentUser = null;
+                updateArticlePermissions();
+                return null;
+            }
+
+            const data = await response.json();
+
+            currentUser = data.user || null;
+
+            updateArticlePermissions();
+
+            return currentUser;
+
+        } catch (error) {
+            currentUser = null;
+            updateArticlePermissions();
+            return null;
+        }
+    }
+
+    function canEdit() {
+        return Boolean(
+            currentUser &&
+            ["admin", "moderator"].includes(currentUser.role)
+        );
+    }
+
+    function updateArticlePermissions() {
+        const canManage = canEdit();
+
+        $("articleAdminBar").hidden = !canManage;
+        $("articleReaderAdminActions").hidden =
+            !canManage || !currentArticle;
+    }
+
+    /* ================= NAVIGATION ================= */
+
+    function hideArticleSubpages() {
+        $("articlesListView").classList.add("article-hidden");
+        $("articleReader").classList.add("article-hidden");
+        $("articleEditor").classList.add("article-hidden");
+    }
+
+    async function showArticles() {
+        /*
+         * Получаем актуальную сессию с сервера,
+         * чтобы не использовать устаревшую роль.
+         */
+        await getCurrentUser();
+
+        if (typeof window.hideAllPages === "function") {
+            window.hideAllPages();
+        } else {
+            main.hidden = true;
+            cabinet.hidden = true;
+            ctf.hidden = true;
+            mod.hidden = true;
+            leaderboard.hidden = true;
+            footer.hidden = true;
+        }
+
+        page.hidden = false;
+
+        $("articlesListView").classList.remove("article-hidden");
+        $("articleReader").classList.add("article-hidden");
+        $("articleEditor").classList.add("article-hidden");
+
+        updateArticlePermissions();
+
+        await loadArticles();
+
+        window.scrollTo(0, 0);
+    }
+
+    function showMainPage() {
+        hideArticleSubpages();
+
+        page.hidden = true;
+        footer.hidden = false;
+        main.hidden = false;
+
+        window.scrollTo(0, 0);
+    }
+
+    /* ================= ARTICLES LIST ================= */
+
+    async function loadArticles() {
+        const grid = $("articlesGrid");
+
+        grid.innerHTML =
+            '<div class="article-empty">Загрузка статей...</div>';
+
+        try {
+            const response = await fetch("/api/articles", {
+                credentials: "same-origin",
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
+
+            const data = await parseResponse(
+                response,
+                "Не удалось загрузить статьи"
+            );
+
+            const articles = Array.isArray(data.articles)
+                ? data.articles
+                : [];
 
             if (!articles.length) {
-                grid.innerHTML = '<div class="article-empty">Пока нет опубликованных статей.</div>';
+                grid.innerHTML =
+                    '<div class="article-empty">Пока нет опубликованных статей.</div>';
                 return;
             }
 
-            grid.innerHTML = articles.map(article => `
-                <article class="article-card" data-id="${Number(article.id)}">
-                    ${
-                        article.preview
-                        ? `<img class="article-card-image"
-                            src="${escapeHTML(article.preview)}"
-                            alt="Превью статьи" loading="lazy">`
-                        : `<div class="article-card-placeholder">⌕</div>`
-                    }
-                    <div class="article-card-body">
-                        <div class="article-card-meta">
-                            <span>${escapeHTML(article.author)}</span>
-                            <span>${formatDate(article.created_at)}</span>
+            grid.innerHTML = articles.map(article => {
+                const id = Number(article.id);
+                const preview = safeMediaUrl(article.preview);
+
+                return `
+                    <article
+                        class="article-card"
+                        data-id="${Number.isSafeInteger(id) ? id : 0}"
+                        tabindex="0"
+                        role="button"
+                        aria-label="Открыть статью ${escapeHTML(article.title)}"
+                    >
+                        ${
+                            preview
+                            ? `<img
+                                class="article-card-image"
+                                src="${escapeHTML(preview)}"
+                                alt="Превью статьи"
+                                loading="lazy"
+                            >`
+                            : `<div class="article-card-placeholder">⌕</div>`
+                        }
+
+                        <div class="article-card-body">
+                            <div class="article-card-meta">
+                                <span>${escapeHTML(article.author)}</span>
+                                <span>${formatDate(article.created_at)}</span>
+                            </div>
+
+                            <h3>${escapeHTML(article.title)}</h3>
+                            <p>${escapeHTML(article.excerpt)}</p>
                         </div>
-                        <h3>${escapeHTML(article.title)}</h3>
-                        <p>${escapeHTML(article.excerpt)}</p>
-                    </div>
-                </article>
-            `).join("");
+                    </article>
+                `;
+            }).join("");
 
             grid.querySelectorAll(".article-card").forEach(card => {
-                card.addEventListener("click", () => {
-                    openArticle(Number(card.dataset.id));
+                const open = () => {
+                    const id = Number(card.dataset.id);
+
+                    if (Number.isSafeInteger(id) && id > 0) {
+                        openArticle(id);
+                    }
+                };
+
+                card.addEventListener("click", open);
+
+                card.addEventListener("keydown", event => {
+                    if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        open();
+                    }
                 });
             });
 
@@ -1246,43 +1667,66 @@
             grid.innerHTML = `
                 <div class="article-empty">
                     ${escapeHTML(error.message)}
-                </div>`;
+                </div>
+            `;
         }
     }
 
+    /* ================= ARTICLE READER ================= */
+
     async function openArticle(id) {
         try {
-            const response = await fetch(`/api/articles/${id}`);
-            const data = await response.json();
+            const response = await fetch(`/api/articles/${id}`, {
+                credentials: "same-origin",
+                headers: {
+                    "Accept": "application/json"
+                }
+            });
 
-            if (!response.ok) {
-                throw new Error(data.error || "Статья не найдена");
+            const data = await parseResponse(
+                response,
+                "Статья не найдена"
+            );
+
+            if (!data.article) {
+                throw new Error("Сервер не вернул статью.");
             }
 
             currentArticle = data.article;
+
+            await getCurrentUser();
 
             $("articlesListView").classList.add("article-hidden");
             $("articleEditor").classList.add("article-hidden");
             $("articleReader").classList.remove("article-hidden");
 
-            $("articleReaderTitle").textContent = currentArticle.title;
-            $("articleReaderExcerpt").textContent = currentArticle.excerpt;
+            $("articleReaderTitle").textContent =
+                currentArticle.title || "";
+
+            $("articleReaderExcerpt").textContent =
+                currentArticle.excerpt || "";
 
             $("articleReaderMeta").textContent =
-                `Автор: ${currentArticle.author} · ${formatDate(currentArticle.created_at)}`;
+                `Автор: ${currentArticle.author || "Не указан"} · ${formatDate(currentArticle.created_at)}`;
 
-            $("articleReaderContent").innerHTML = currentArticle.content;
+            /*
+             * Не вставляем исходный HTML напрямую.
+             */
+            $("articleReaderContent").innerHTML =
+                sanitizeArticleHTML(currentArticle.content);
 
             const preview = $("articleReaderPreview");
+            const safePreview = safeMediaUrl(currentArticle.preview);
 
-            if (currentArticle.preview) {
-                preview.src = currentArticle.preview;
+            if (safePreview) {
+                preview.src = safePreview;
                 preview.hidden = false;
             } else {
+                preview.removeAttribute("src");
                 preview.hidden = true;
             }
 
-            $("articleReaderAdminActions").hidden = !canEdit();
+            updateArticlePermissions();
 
             window.scrollTo(0, 0);
 
@@ -1291,7 +1735,11 @@
         }
     }
 
-    function openEditor(article = null) {
+    /* ================= EDITOR ================= */
+
+    async function openEditor(article = null) {
+        await getCurrentUser();
+
         if (!canEdit()) {
             alert("Недостаточно прав.");
             return;
@@ -1299,6 +1747,7 @@
 
         editingArticleId = article ? article.id : null;
         uploadedPreview = article ? article.preview : null;
+        removeExistingPreview = false;
 
         $("articlesListView").classList.add("article-hidden");
         $("articleReader").classList.add("article-hidden");
@@ -1309,22 +1758,49 @@
 
         $("articleTitleInput").value = article?.title || "";
         $("articleExcerptInput").value = article?.excerpt || "";
+
+        /*
+         * Автор заполняется текущим пользователем.
+         * Сервер всё равно должен проверять авторство.
+         */
         $("articleAuthorInput").value =
             article?.author || currentUser?.name || "";
 
-        $("articleContentEditor").innerHTML = article?.content || "";
+        $("articleContentEditor").innerHTML =
+            sanitizeArticleHTML(article?.content || "");
+
         $("articleEditorMessage").textContent = "";
 
         $("articlePreviewInput").value = "";
 
+        if (previewObjectUrl) {
+            URL.revokeObjectURL(previewObjectUrl);
+            previewObjectUrl = null;
+        }
+
         const preview = $("articlePreviewLocal");
+        const removeButton = $("articleRemovePreviewBtn");
 
         if (article?.preview) {
-            preview.src = article.preview;
-            preview.style.display = "block";
-            $("articlePreviewStatus").textContent = "Текущее превью сохранено";
+            const safePreview = safeMediaUrl(article.preview);
+
+            if (safePreview) {
+                preview.src = safePreview;
+                preview.style.display = "block";
+                removeButton.hidden = false;
+
+                $("articlePreviewStatus").textContent =
+                    "Текущее превью сохранено";
+            } else {
+                preview.removeAttribute("src");
+                preview.style.display = "none";
+                removeButton.hidden = true;
+                $("articlePreviewStatus").textContent = "";
+            }
         } else {
+            preview.removeAttribute("src");
             preview.style.display = "none";
+            removeButton.hidden = true;
             $("articlePreviewStatus").textContent = "";
         }
 
@@ -1344,57 +1820,116 @@
         }
     }
 
+    /* ================= FILE UPLOAD ================= */
+
     async function uploadMedia(file) {
-        if (!file) return null;
+        if (!file) {
+            throw new Error("Файл не выбран.");
+        }
 
         const formData = new FormData();
         formData.append("file", file);
 
         const response = await fetch("/api/articles/upload-media", {
             method: "POST",
-            body: formData
+            body: formData,
+            credentials: "same-origin"
         });
 
-        const data = await response.json();
+        const data = await parseResponse(
+            response,
+            "Ошибка загрузки файла"
+        );
 
-        if (!response.ok) {
-            throw new Error(data.error || "Ошибка загрузки файла");
+        if (!data.url) {
+            throw new Error("Сервер не вернул адрес файла.");
         }
 
         return data;
     }
 
+    function saveEditorSelection() {
+        const editor = $("articleContentEditor");
+        const selection = window.getSelection();
+
+        if (!selection || selection.rangeCount === 0) {
+            return;
+        }
+
+        const range = selection.getRangeAt(0);
+
+        if (editor.contains(range.commonAncestorContainer)) {
+            savedSelection = range.cloneRange();
+        }
+    }
+
+    function restoreEditorSelection() {
+        const editor = $("articleContentEditor");
+
+        editor.focus();
+
+        if (!savedSelection) {
+            const range = document.createRange();
+            range.selectNodeContents(editor);
+            range.collapse(false);
+
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+
+            return;
+        }
+
+        const selection = window.getSelection();
+
+        selection.removeAllRanges();
+        selection.addRange(savedSelection);
+    }
+
     async function insertMedia(file, type) {
         if (!file) return;
 
+        saveEditorSelection();
+
         try {
-            $("articleEditorMessage").textContent = "Загрузка файла...";
+            setEditorMessage("Загрузка файла...");
 
             const data = await uploadMedia(file);
-            const editor = $("articleContentEditor");
+            const safeUrl = safeMediaUrl(data.url);
 
-            editor.focus();
+            if (!safeUrl) {
+                throw new Error("Сервер вернул некорректный адрес файла.");
+            }
+
+            restoreEditorSelection();
 
             let html = "";
 
             if (type === "image") {
-                html = `<p><img src="${escapeHTML(data.url)}" alt=""></p>`;
+                html = `<p><img src="${escapeHTML(safeUrl)}" alt=""></p>`;
             } else if (type === "video") {
-                html = `<p><video controls preload="metadata" src="${escapeHTML(data.url)}"></video></p>`;
+                html = `<p><video controls preload="metadata" src="${escapeHTML(safeUrl)}"></video></p>`;
             } else {
-                html = `<p><audio controls src="${escapeHTML(data.url)}"></audio></p>`;
+                html = `<p><audio controls preload="metadata" src="${escapeHTML(safeUrl)}"></audio></p>`;
             }
 
             document.execCommand("insertHTML", false, html);
-            $("articleEditorMessage").textContent = "Файл добавлен";
+
+            saveEditorSelection();
+
+            setEditorMessage("Файл добавлен.", "success");
 
         } catch (error) {
-            $("articleEditorMessage").textContent = error.message;
+            setEditorMessage(error.message, "error");
         }
     }
 
+    /* ================= SAVE ARTICLE ================= */
+
     async function saveArticle(event) {
         event.preventDefault();
+
+        await getCurrentUser();
 
         if (!canEdit()) {
             alert("Недостаточно прав.");
@@ -1404,12 +1939,18 @@
         const title = $("articleTitleInput").value.trim();
         const excerpt = $("articleExcerptInput").value.trim();
         const author = $("articleAuthorInput").value.trim();
-        const content = $("articleContentEditor").innerHTML;
 
-        if (!title || !excerpt || !author ||
-            !$("articleContentEditor").innerText.trim()) {
-            $("articleEditorMessage").textContent =
-                "Заполните все обязательные поля.";
+        const editor = $("articleContentEditor");
+        const content = editor.innerHTML;
+        const textContent = editor.innerText.trim();
+
+        if (!title || !excerpt || !author || !textContent) {
+            setEditorMessage("Заполните все обязательные поля.", "error");
+            return;
+        }
+
+        if (title.length > 200 || excerpt.length > 500 || author.length > 120) {
+            setEditorMessage("Превышена допустимая длина одного из полей.", "error");
             return;
         }
 
@@ -1423,12 +1964,29 @@
         const previewFile = $("articlePreviewInput").files[0];
 
         if (previewFile) {
+            const allowedTypes = [
+                "image/png",
+                "image/jpeg",
+                "image/webp",
+                "image/gif"
+            ];
+
+            if (!allowedTypes.includes(previewFile.type)) {
+                setEditorMessage("Недопустимый формат превью.", "error");
+                return;
+            }
+
             formData.append("preview", previewFile);
         }
 
+        if (removeExistingPreview) {
+            formData.append("remove_preview", "true");
+        }
+
         const saveButton = $("articleSaveBtn");
+
         saveButton.disabled = true;
-        $("articleEditorMessage").textContent = "Сохранение...";
+        setEditorMessage("Сохранение...");
 
         try {
             const url = editingArticleId
@@ -1437,16 +1995,18 @@
 
             const response = await fetch(url, {
                 method: editingArticleId ? "PUT" : "POST",
-                body: formData
+                body: formData,
+                credentials: "same-origin"
             });
 
-            const data = await response.json();
+            const data = await parseResponse(
+                response,
+                "Не удалось сохранить статью"
+            );
 
-            if (!response.ok) {
-                throw new Error(data.error || "Не удалось сохранить статью");
+            if (!data.article) {
+                throw new Error("Сервер не вернул сохранённую статью.");
             }
-
-            $("articleEditorMessage").textContent = "Статья сохранена.";
 
             currentArticle = data.article;
             editingArticleId = null;
@@ -1454,17 +2014,23 @@
             await getCurrentUser();
             await loadArticles();
 
-            openArticle(data.article.id);
+            await openArticle(data.article.id);
 
         } catch (error) {
-            $("articleEditorMessage").textContent = error.message;
+            setEditorMessage(error.message, "error");
         } finally {
             saveButton.disabled = false;
         }
     }
 
+    /* ================= DELETE ARTICLE ================= */
+
     async function deleteArticle() {
-        if (!currentArticle || !canEdit()) return;
+        await getCurrentUser();
+
+        if (!currentArticle || !canEdit()) {
+            return;
+        }
 
         const confirmed = confirm(
             `Удалить статью «${currentArticle.title}»?`
@@ -1475,24 +2041,139 @@
         try {
             const response = await fetch(
                 `/api/articles/${currentArticle.id}`,
-                { method: "DELETE" }
+                {
+                    method: "DELETE",
+                    credentials: "same-origin"
+                }
             );
 
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || "Ошибка удаления");
-            }
+            await parseResponse(response, "Ошибка удаления");
 
             currentArticle = null;
-            showArticles();
+            editingArticleId = null;
+
+            await showArticles();
 
         } catch (error) {
             alert(error.message);
         }
     }
 
-    /* NAVIGATION */
+    /* ================= PREVIEW ================= */
+
+    function clearPreview() {
+        uploadedPreview = null;
+        removeExistingPreview = true;
+
+        $("articlePreviewInput").value = "";
+
+        const preview = $("articlePreviewLocal");
+
+        if (previewObjectUrl) {
+            URL.revokeObjectURL(previewObjectUrl);
+            previewObjectUrl = null;
+        }
+
+        preview.removeAttribute("src");
+        preview.style.display = "none";
+
+        $("articlePreviewStatus").textContent =
+            "Превью будет удалено при сохранении.";
+
+        $("articleRemovePreviewBtn").hidden = true;
+    }
+
+    $("articlePreviewInput").addEventListener("change", event => {
+        const file = event.target.files[0];
+
+        if (!file) return;
+
+        const allowedTypes = [
+            "image/png",
+            "image/jpeg",
+            "image/webp",
+            "image/gif"
+        ];
+
+        if (!allowedTypes.includes(file.type)) {
+            event.target.value = "";
+            setEditorMessage("Разрешены PNG, JPEG, WEBP и GIF.", "error");
+            return;
+        }
+
+        if (file.size > 10 * 1024 * 1024) {
+            event.target.value = "";
+            setEditorMessage("Размер превью не должен превышать 10 МБ.", "error");
+            return;
+        }
+
+        removeExistingPreview = false;
+
+        if (previewObjectUrl) {
+            URL.revokeObjectURL(previewObjectUrl);
+        }
+
+        previewObjectUrl = URL.createObjectURL(file);
+
+        const preview = $("articlePreviewLocal");
+
+        preview.src = previewObjectUrl;
+        preview.style.display = "block";
+
+        $("articlePreviewStatus").textContent = file.name;
+        $("articleRemovePreviewBtn").hidden = false;
+    });
+
+    $("articleRemovePreviewBtn").addEventListener("click", clearPreview);
+
+    /* ================= TOOLBAR ================= */
+
+    document.querySelectorAll(".article-toolbar button").forEach(button => {
+        /*
+         * Не даём кнопке забрать фокус у contenteditable
+         * до выполнения команды.
+         */
+        button.addEventListener("mousedown", event => {
+            event.preventDefault();
+            saveEditorSelection();
+        });
+
+        button.addEventListener("click", () => {
+            const command = button.dataset.command;
+            const value = button.dataset.value || null;
+
+            restoreEditorSelection();
+
+            if (!command) return;
+
+            document.execCommand(command, false, value);
+
+            saveEditorSelection();
+        });
+    });
+
+    $("articleContentEditor").addEventListener("keyup", saveEditorSelection);
+    $("articleContentEditor").addEventListener("mouseup", saveEditorSelection);
+    $("articleContentEditor").addEventListener("input", saveEditorSelection);
+
+    /* ================= MEDIA INPUTS ================= */
+
+    $("articleImageInput").addEventListener("change", event => {
+        insertMedia(event.target.files[0], "image");
+        event.target.value = "";
+    });
+
+    $("articleVideoInput").addEventListener("change", event => {
+        insertMedia(event.target.files[0], "video");
+        event.target.value = "";
+    });
+
+    $("articleAudioInput").addEventListener("change", event => {
+        insertMedia(event.target.files[0], "audio");
+        event.target.value = "";
+    });
+
+    /* ================= EVENTS ================= */
 
     nav.addEventListener("click", event => {
         event.preventDefault();
@@ -1515,68 +2196,16 @@
     });
 
     $("articleEditBtn").addEventListener("click", () => {
-        if (currentArticle) openEditor(currentArticle);
+        if (currentArticle) {
+            openEditor(currentArticle);
+        }
     });
 
     $("articleDeleteBtn").addEventListener("click", deleteArticle);
 
     $("articleEditorForm").addEventListener("submit", saveArticle);
 
-
-    /* EDITOR TOOLBAR */
-
-    document.querySelectorAll(".article-toolbar button").forEach(button => {
-        button.addEventListener("click", () => {
-            const command = button.dataset.command;
-            const value = button.dataset.value || null;
-
-            $("articleContentEditor").focus();
-
-            if (command === "formatBlock") {
-                document.execCommand(command, false, value);
-            } else if (command === "fontSize") {
-                document.execCommand(command, false, value);
-            } else {
-                document.execCommand(command, false, null);
-            }
-        });
-    });
-
-
-    /* PREVIEW UPLOAD */
-
-    $("articlePreviewInput").addEventListener("change", event => {
-        const file = event.target.files[0];
-
-        if (!file) return;
-
-        const preview = $("articlePreviewLocal");
-        preview.src = URL.createObjectURL(file);
-        preview.style.display = "block";
-
-        $("articlePreviewStatus").textContent = file.name;
-    });
-
-
-    /* MEDIA UPLOADS */
-
-    $("articleImageInput").addEventListener("change", event => {
-        insertMedia(event.target.files[0], "image");
-        event.target.value = "";
-    });
-
-    $("articleVideoInput").addEventListener("change", event => {
-        insertMedia(event.target.files[0], "video");
-        event.target.value = "";
-    });
-
-    $("articleAudioInput").addEventListener("change", event => {
-        insertMedia(event.target.files[0], "audio");
-        event.target.value = "";
-    });
-
-
-    /* INIT */
+    /* ================= INIT ================= */
 
     getCurrentUser();
 
